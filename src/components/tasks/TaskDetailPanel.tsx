@@ -164,6 +164,29 @@ export function TaskDetailPanel({
     }
   };
 
+  const handlePriorityChange = async (newPriority: typeof priority) => {
+    if (!task) return;
+    setPriority(newPriority);
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update priority");
+
+      router.refresh();
+      toast.success("Priority updated");
+    } catch {
+      toast.error("Failed to update priority");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleStatusChange = async (newStatusId: string) => {
     if (!task) return;
 
@@ -357,10 +380,7 @@ export function TaskDetailPanel({
               </Label>
               <Select
                 value={priority}
-                onValueChange={(value) => {
-                  setPriority(value as typeof priority);
-                  setTimeout(handleSave, 0);
-                }}
+                onValueChange={(value) => handlePriorityChange(value as typeof priority)}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue>
