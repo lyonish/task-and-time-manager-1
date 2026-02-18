@@ -115,7 +115,7 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors",
+        "group flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors",
         isUpdating && "opacity-50 pointer-events-none"
       )}
     >
@@ -172,7 +172,7 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
           </AvatarFallback>
         </Avatar>
       ) : (
-        <div className="h-6 w-6 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="h-6 w-6 rounded-full border-2 border-dashed border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <User className="h-3 w-3 text-muted-foreground" />
         </div>
       )}
@@ -180,7 +180,7 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       {/* Actions */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>

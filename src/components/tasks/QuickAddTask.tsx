@@ -56,7 +56,7 @@ export function QuickAddTask({ projectId, statusId }: QuickAddTaskProps) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-gray-50 dark:hover:bg-gray-900 rounded-md transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
       >
         <Plus className="h-4 w-4" />
         Add task...

@@ -2,6 +2,7 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { Bell, Search, LogOut, User } from "lucide-react";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,20 +26,23 @@ export function Header() {
     .slice(0, 2);
 
   return (
-    <header className="h-14 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 flex items-center justify-between">
+    <header className="h-14 border-b border-sidebar-border bg-sidebar px-4 flex items-center justify-between">
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search tasks, projects..."
-            className="pl-10 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+            className="pl-10 bg-muted border-border"
           />
         </div>
       </div>
 
       {/* Right Section */}
       <div className="flex items-center gap-2">
+        {/* Theme Switcher */}
+        <ThemeSwitcher />
+
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

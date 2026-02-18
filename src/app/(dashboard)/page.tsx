@@ -129,7 +129,7 @@ export default async function DashboardPage() {
               {data.recentTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
                   <div>
                     <p className="font-medium">{task.title}</p>

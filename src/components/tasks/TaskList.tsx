@@ -88,7 +88,7 @@ export function TaskList({ projectId, statuses, tasks, members, currentUserId }:
               {/* Section Header */}
               <button
                 onClick={() => toggleSection(status.id)}
-                className="flex items-center gap-2 w-full px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                className="flex items-center gap-2 w-full px-2 py-1.5 hover:bg-accent rounded-md transition-colors"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -131,7 +131,7 @@ export function TaskList({ projectId, statuses, tasks, members, currentUserId }:
         {unassignedTasks.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center gap-2 px-2 py-1.5">
-              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <span className="w-2 h-2 rounded-full bg-muted-foreground" />
               <span className="font-medium text-muted-foreground">No Status</span>
               <span className="text-sm text-muted-foreground">
                 ({unassignedTasks.length})

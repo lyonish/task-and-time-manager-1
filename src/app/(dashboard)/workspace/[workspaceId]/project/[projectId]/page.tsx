@@ -33,7 +33,7 @@ export default async function ProjectPage({
   return (
     <div className="h-full flex flex-col">
       {/* Project Header */}
-      <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+      <div className="border-b border-border px-6 py-4">
         <div className="flex items-center gap-3">
           <span
             className="w-3 h-3 rounded"

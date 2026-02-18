@@ -12,7 +12,7 @@ const priorityColors: Record<string, string> = {
   High: "bg-orange-500",
   Medium: "bg-yellow-500",
   Low: "bg-blue-500",
-  None: "bg-gray-400",
+  None: "bg-muted-foreground",
 };
 
 async function getMyTasks(userId: string) {
@@ -60,7 +60,7 @@ export default async function MyTasksPage() {
               {pendingTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                  className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
                   <Checkbox />
                   <div className="flex-1 min-w-0">

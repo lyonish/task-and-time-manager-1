@@ -59,7 +59,7 @@ export default async function DashboardLayout({
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
+        <main className="flex-1 overflow-y-auto bg-background">
           {children}
         </main>
       </div>
