@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch } from "lucide-react";
+import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
 
@@ -309,6 +309,41 @@ export function TaskDetailPanel({
     }
   };
 
+  const handleCreateDerivedTask = async () => {
+    if (!task) return;
+
+    // Find the next layer (one level below current)
+    const sortedLayers = [...layers].sort((a, b) => a.position - b.position);
+    const currentLayerIndex = sortedLayers.findIndex((l) => l.id === task.layerId);
+    const nextLayer = currentLayerIndex >= 0 && currentLayerIndex < sortedLayers.length - 1
+      ? sortedLayers[currentLayerIndex + 1]
+      : null;
+
+    try {
+      // Get project ID from the current task's URL or context
+      const projectId = window.location.pathname.match(/project\/([^/]+)/)?.[1];
+      if (!projectId) throw new Error("Project ID not found");
+
+      const response = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "New subtask",
+          parentTaskId: task.id,
+          layerId: nextLayer?.id || task.layerId,
+          statusId: task.statusId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create task");
+
+      router.refresh();
+      toast.success("Derived task created");
+    } catch {
+      toast.error("Failed to create derived task");
+    }
+  };
+
   if (!task) return null;
 
   const currentStatus = statuses.find((s) => s.id === statusId);
@@ -529,6 +564,19 @@ export function TaskDetailPanel({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {/* Create Derived Task */}
+            {layers.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateDerivedTask}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create derived task
+              </Button>
             )}
           </div>
 
