@@ -260,10 +260,6 @@ export function TaskDetailPanel({
             <SheetTitle className="sr-only">Task Details</SheetTitle>
             <Select value={statusId || ""} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-auto">
-                <span
-                  className="w-2 h-2 rounded-full mr-2"
-                  style={{ backgroundColor: currentStatus?.color || "#9ca3af" }}
-                />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

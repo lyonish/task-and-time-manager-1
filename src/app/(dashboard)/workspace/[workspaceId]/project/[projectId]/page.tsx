@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { WorkspaceService } from "@/services/workspace.service";
 import { ProjectService } from "@/services/project.service";
 import { TaskList } from "@/components/tasks/TaskList";
+import { WorkflowSettings } from "@/components/workflow/WorkflowSettings";
 
 export default async function ProjectPage({
   params,
@@ -34,12 +35,18 @@ export default async function ProjectPage({
     <div className="h-full flex flex-col">
       {/* Project Header */}
       <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: project.color || "#6366f1" }}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: project.color || "#6366f1" }}
+            />
+            <h1 className="text-xl font-bold">{project.name}</h1>
+          </div>
+          <WorkflowSettings
+            projectId={projectId}
+            statuses={project.workflowStatuses || []}
           />
-          <h1 className="text-xl font-bold">{project.name}</h1>
         </div>
         {project.description && (
           <p className="text-sm text-muted-foreground mt-1">
