@@ -4,6 +4,7 @@ import { WorkspaceService } from "@/services/workspace.service";
 import { ProjectService } from "@/services/project.service";
 import { TaskList } from "@/components/tasks/TaskList";
 import { WorkflowSettings } from "@/components/workflow/WorkflowSettings";
+import { LayerSettings } from "@/components/workflow/LayerSettings";
 
 export default async function ProjectPage({
   params,
@@ -43,10 +44,16 @@ export default async function ProjectPage({
             />
             <h1 className="text-xl font-bold">{project.name}</h1>
           </div>
-          <WorkflowSettings
-            projectId={projectId}
-            statuses={project.workflowStatuses || []}
-          />
+          <div className="flex items-center gap-2">
+            <LayerSettings
+              projectId={projectId}
+              layers={project.taskLayers || []}
+            />
+            <WorkflowSettings
+              projectId={projectId}
+              statuses={project.workflowStatuses || []}
+            />
+          </div>
         </div>
         {project.description && (
           <p className="text-sm text-muted-foreground mt-1">
@@ -60,6 +67,7 @@ export default async function ProjectPage({
         <TaskList
           projectId={projectId}
           statuses={project.workflowStatuses || []}
+          layers={project.taskLayers || []}
           tasks={project.tasks || []}
           members={members.map((m) => ({
             id: m.user!.id,

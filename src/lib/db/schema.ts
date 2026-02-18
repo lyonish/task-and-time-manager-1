@@ -133,6 +133,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
   }),
   workflowStatuses: many(workflowStatuses),
+  taskLayers: many(taskLayers),
   tasks: many(tasks),
   activityLogs: many(activityLogs),
 }));
@@ -168,6 +169,35 @@ export const workflowStatusesRelations = relations(
 );
 
 // =============================================
+// TASK LAYERS (WBS)
+// =============================================
+export const taskLayers = mysqlTable(
+  "task_layers",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: varchar("project_id", { length: 36 }).notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    color: varchar("color", { length: 7 }).default("#6366f1"),
+    position: int("position").notNull().default(0),
+  },
+  (table) => [
+    index("idx_tl_project").on(table.projectId),
+    index("idx_tl_position").on(table.projectId, table.position),
+  ]
+);
+
+export const taskLayersRelations = relations(taskLayers, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [taskLayers.projectId],
+    references: [projects.id],
+  }),
+  tasks: many(tasks),
+}));
+
+// =============================================
 // TASKS
 // =============================================
 export const tasks = mysqlTable(
@@ -178,6 +208,8 @@ export const tasks = mysqlTable(
       .$defaultFn(() => crypto.randomUUID()),
     projectId: varchar("project_id", { length: 36 }).notNull(),
     statusId: varchar("status_id", { length: 36 }),
+    layerId: varchar("layer_id", { length: 36 }),
+    parentTaskId: varchar("parent_task_id", { length: 36 }),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description"),
     assigneeId: varchar("assignee_id", { length: 36 }),
@@ -195,6 +227,8 @@ export const tasks = mysqlTable(
     index("idx_tasks_project").on(table.projectId),
     index("idx_tasks_assignee").on(table.assigneeId),
     index("idx_tasks_status").on(table.statusId),
+    index("idx_tasks_layer").on(table.layerId),
+    index("idx_tasks_parent").on(table.parentTaskId),
     index("idx_tasks_due").on(table.dueDate),
     index("idx_tasks_position").on(table.projectId, table.statusId, table.position),
   ]
@@ -208,6 +242,18 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   status: one(workflowStatuses, {
     fields: [tasks.statusId],
     references: [workflowStatuses.id],
+  }),
+  layer: one(taskLayers, {
+    fields: [tasks.layerId],
+    references: [taskLayers.id],
+  }),
+  parentTask: one(tasks, {
+    fields: [tasks.parentTaskId],
+    references: [tasks.id],
+    relationName: "subtasks",
+  }),
+  subtasks: many(tasks, {
+    relationName: "subtasks",
   }),
   assignee: one(users, {
     fields: [tasks.assigneeId],

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import {
   projects,
   workflowStatuses,
+  taskLayers,
   activityLogs,
   tasks,
 } from "@/lib/db/schema";
@@ -246,10 +247,14 @@ export class ProjectService {
         workflowStatuses: {
           orderBy: [asc(workflowStatuses.position)],
         },
+        taskLayers: {
+          orderBy: [asc(taskLayers.position)],
+        },
         tasks: {
           with: {
             assignee: true,
             status: true,
+            layer: true,
           },
           orderBy: [asc(tasks.position)],
         },

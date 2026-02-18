@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal } from "lucide-react";
+import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
 
@@ -36,6 +36,13 @@ interface Status {
   name: string;
   color: string | null;
   isCompleted: boolean | null;
+}
+
+interface Layer {
+  id: string;
+  name: string;
+  color: string | null;
+  position: number;
 }
 
 interface Member {
@@ -61,6 +68,8 @@ interface Task {
   title: string;
   description: string | null;
   statusId: string | null;
+  layerId: string | null;
+  parentTaskId: string | null;
   assigneeId: string | null;
   dueDate: Date | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
@@ -70,6 +79,7 @@ interface Task {
     avatarUrl: string | null;
   } | null;
   status?: Status | null;
+  layer?: Layer | null;
 }
 
 interface TaskDetailPanelProps {
@@ -77,6 +87,8 @@ interface TaskDetailPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   statuses: Status[];
+  layers: Layer[];
+  tasks: Task[];
   members: Member[];
   currentUserId: string;
 }
@@ -96,6 +108,8 @@ export function TaskDetailPanel({
   open,
   onOpenChange,
   statuses,
+  layers,
+  tasks,
   members,
   currentUserId,
 }: TaskDetailPanelProps) {
@@ -103,6 +117,8 @@ export function TaskDetailPanel({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [statusId, setStatusId] = useState<string | null>(null);
+  const [layerId, setLayerId] = useState<string | null>(null);
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [priority, setPriority] = useState<typeof priorities[number]>("None");
   const [dueDate, setDueDate] = useState("");
@@ -115,6 +131,8 @@ export function TaskDetailPanel({
       setTitle(task.title);
       setDescription(task.description || "");
       setStatusId(task.statusId);
+      setLayerId(task.layerId);
+      setParentTaskId(task.parentTaskId);
       setAssigneeId(task.assigneeId);
       setPriority(task.priority);
       setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "");
@@ -229,6 +247,50 @@ export function TaskDetailPanel({
     }
   };
 
+  const handleLayerChange = async (newLayerId: string) => {
+    if (!task) return;
+
+    const layer = newLayerId === "none" ? null : newLayerId;
+
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layerId: layer }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update layer");
+
+      setLayerId(layer);
+      router.refresh();
+      toast.success("Layer updated");
+    } catch {
+      toast.error("Failed to update layer");
+    }
+  };
+
+  const handleParentTaskChange = async (newParentId: string) => {
+    if (!task) return;
+
+    const parent = newParentId === "none" ? null : newParentId;
+
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentTaskId: parent }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update parent task");
+
+      setParentTaskId(parent);
+      router.refresh();
+      toast.success("Parent task updated");
+    } catch {
+      toast.error("Failed to update parent task");
+    }
+  };
+
   const handleDelete = async () => {
     if (!task || !confirm("Are you sure you want to delete this task?")) return;
 
@@ -250,7 +312,11 @@ export function TaskDetailPanel({
   if (!task) return null;
 
   const currentStatus = statuses.find((s) => s.id === statusId);
+  const currentLayer = layers.find((l) => l.id === layerId);
+  const currentParentTask = tasks.find((t) => t.id === parentTaskId);
   const currentAssignee = members.find((m) => m.id === assigneeId);
+  // Filter out current task and its descendants for parent selection
+  const availableParentTasks = tasks.filter((t) => t.id !== task.id);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -392,6 +458,78 @@ export function TaskDetailPanel({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Layer */}
+            {layers.length > 0 && (
+              <div className="flex items-center gap-4">
+                <Label className="w-24 text-muted-foreground flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Layer
+                </Label>
+                <Select
+                  value={layerId || "none"}
+                  onValueChange={handleLayerChange}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="None">
+                      {currentLayer ? (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: currentLayer.color || "#6366f1" }}
+                          />
+                          {currentLayer.name}
+                        </span>
+                      ) : (
+                        "None"
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {layers.map((layer) => (
+                      <SelectItem key={layer.id} value={layer.id}>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: layer.color || "#6366f1" }}
+                          />
+                          {layer.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Parent Task */}
+            {availableParentTasks.length > 0 && (
+              <div className="flex items-center gap-4">
+                <Label className="w-24 text-muted-foreground flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Parent
+                </Label>
+                <Select
+                  value={parentTaskId || "none"}
+                  onValueChange={handleParentTaskChange}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="None">
+                      {currentParentTask ? currentParentTask.title : "None"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {availableParentTasks.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Description */}

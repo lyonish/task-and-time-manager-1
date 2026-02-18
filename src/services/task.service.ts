@@ -37,6 +37,8 @@ export class TaskService {
       id: taskId,
       projectId,
       statusId,
+      layerId: data.layerId,
+      parentTaskId: data.parentTaskId,
       title: data.title,
       description: data.description,
       assigneeId: data.assigneeId,
@@ -67,6 +69,7 @@ export class TaskService {
         assignee: true,
         creator: true,
         status: true,
+        layer: true,
         comments: {
           with: {
             author: true,
@@ -126,6 +129,14 @@ export class TaskService {
     if (data.assigneeId !== undefined && data.assigneeId !== task.assigneeId) {
       updates.assigneeId = data.assigneeId;
       changes.assigneeId = { old: task.assigneeId, new: data.assigneeId };
+    }
+    if (data.layerId !== undefined && data.layerId !== task.layerId) {
+      updates.layerId = data.layerId;
+      changes.layerId = { old: task.layerId, new: data.layerId };
+    }
+    if (data.parentTaskId !== undefined && data.parentTaskId !== task.parentTaskId) {
+      updates.parentTaskId = data.parentTaskId;
+      changes.parentTaskId = { old: task.parentTaskId, new: data.parentTaskId };
     }
 
     if (Object.keys(updates).length > 0) {
