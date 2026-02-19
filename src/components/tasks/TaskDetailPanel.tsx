@@ -273,19 +273,140 @@ export function TaskDetailPanel({
     if (!task) return;
 
     const parent = newParentId === "none" ? null : newParentId;
+    const parentTask = parent ? tasks.find((t) => t.id === parent) : null;
+    const sortedLayers = [...layers].sort((a, b) => a.position - b.position);
+    const parentLayerPosition = parentTask?.layer?.position ?? -1;
+    const currentLayerPosition = layers.find((l) => l.id === layerId)?.position ?? -1;
+
+    // Check if we need to adjust the layer (current layer is same or higher than parent)
+    let newLayerId = layerId;
+    let layerShift = 0;
+    let layersCreated = 0;
+    const projectId = window.location.pathname.match(/project\/([^/]+)/)?.[1];
+
+    if (parentTask && parentLayerPosition >= 0 && currentLayerPosition <= parentLayerPosition) {
+      // Calculate how many positions to shift down
+      layerShift = parentLayerPosition - currentLayerPosition + 1;
+
+      // Find the new layer for this task
+      const newLayerIndex = sortedLayers.findIndex((l) => l.id === layerId) + layerShift;
+      if (newLayerIndex < sortedLayers.length) {
+        newLayerId = sortedLayers[newLayerIndex].id;
+      } else {
+        // Need to create new layers
+        const layersNeeded = newLayerIndex - sortedLayers.length + 1;
+        let currentLayers = [...sortedLayers];
+
+        for (let i = 0; i < layersNeeded; i++) {
+          try {
+            if (projectId) {
+              const newLayerNum = currentLayers.length + 1;
+              const layerResponse = await fetch(`/api/projects/${projectId}/layers`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: `Layer ${newLayerNum}` }),
+              });
+
+              if (layerResponse.ok) {
+                const createdLayer = await layerResponse.json();
+                currentLayers.push(createdLayer);
+                layersCreated++;
+              }
+            }
+          } catch {
+            // Continue
+          }
+        }
+
+        if (currentLayers.length > sortedLayers.length) {
+          newLayerId = currentLayers[newLayerIndex]?.id || layerId;
+        }
+      }
+    }
 
     try {
+      // Update the task itself
+      const updateData: { parentTaskId: string | null; layerId?: string | null } = { parentTaskId: parent };
+      if (newLayerId !== layerId) {
+        updateData.layerId = newLayerId;
+      }
+
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentTaskId: parent }),
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) throw new Error("Failed to update parent task");
 
+      // If layer shifted, also shift all descendants
+      if (layerShift > 0 && projectId) {
+        // Find all descendants recursively
+        const findDescendants = (taskId: string): string[] => {
+          const children = tasks.filter((t) => t.parentTaskId === taskId);
+          return children.flatMap((c) => [c.id, ...findDescendants(c.id)]);
+        };
+        const descendantIds = findDescendants(task.id);
+
+        // Refresh layers list to include newly created ones
+        const layersResponse = await fetch(`/api/projects/${projectId}/layers`);
+        const updatedLayers = layersResponse.ok ? await layersResponse.json() : sortedLayers;
+        const updatedSortedLayers = [...updatedLayers].sort((a: { position: number }, b: { position: number }) => a.position - b.position);
+
+        // Update each descendant's layer
+        for (const descId of descendantIds) {
+          const descTask = tasks.find((t) => t.id === descId);
+          if (!descTask?.layerId) continue;
+
+          const descLayerIndex = sortedLayers.findIndex((l) => l.id === descTask.layerId);
+          const newDescLayerIndex = descLayerIndex + layerShift;
+
+          // Create more layers if needed
+          while (newDescLayerIndex >= updatedSortedLayers.length) {
+            try {
+              const newLayerNum = updatedSortedLayers.length + 1;
+              const layerResponse = await fetch(`/api/projects/${projectId}/layers`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: `Layer ${newLayerNum}` }),
+              });
+
+              if (layerResponse.ok) {
+                const createdLayer = await layerResponse.json();
+                updatedSortedLayers.push(createdLayer);
+                layersCreated++;
+              } else {
+                break;
+              }
+            } catch {
+              break;
+            }
+          }
+
+          const newDescLayerId = updatedSortedLayers[newDescLayerIndex]?.id;
+          if (newDescLayerId && newDescLayerId !== descTask.layerId) {
+            await fetch(`/api/tasks/${descId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ layerId: newDescLayerId }),
+            });
+          }
+        }
+      }
+
       setParentTaskId(parent);
+      if (newLayerId !== layerId) {
+        setLayerId(newLayerId);
+      }
       router.refresh();
-      toast.success("Parent task updated");
+
+      if (layersCreated > 0) {
+        toast.success(`Parent updated. ${layersCreated} new layer${layersCreated > 1 ? "s" : ""} created to maintain hierarchy.`);
+      } else if (newLayerId !== layerId) {
+        toast.success("Parent updated. Layers adjusted to maintain hierarchy.");
+      } else {
+        toast.success("Parent task updated");
+      }
     } catch {
       toast.error("Failed to update parent task");
     }
