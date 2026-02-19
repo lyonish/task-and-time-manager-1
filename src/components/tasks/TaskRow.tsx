@@ -147,7 +147,7 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       <div className="flex items-center gap-1.5 w-28 flex-shrink-0" title={task.steps && task.steps.length > 0 ? `${task.steps.filter(s => s.isCompleted).length}/${task.steps.length} steps` : "No steps"}>
         {task.steps && task.steps.length > 0 ? (
           <>
-            <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all"
                 style={{
