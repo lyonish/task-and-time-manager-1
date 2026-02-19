@@ -255,6 +255,7 @@ export class ProjectService {
             assignee: true,
             status: true,
             layer: true,
+            steps: true,
           },
           orderBy: [asc(tasks.position)],
         },

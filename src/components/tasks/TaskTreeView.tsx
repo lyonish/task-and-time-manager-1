@@ -12,9 +12,15 @@ interface Layer {
   position: number;
 }
 
+interface Step {
+  id: string;
+  isCompleted: boolean | null;
+}
+
 interface Task {
   id: string;
   title: string;
+  description: string | null;
   statusId: string | null;
   layerId: string | null;
   parentTaskId: string | null;
@@ -27,6 +33,7 @@ interface Task {
     avatarUrl: string | null;
   } | null;
   layer?: Layer | null;
+  steps?: Step[];
 }
 
 interface TaskTreeViewProps {
@@ -161,33 +168,60 @@ function TreeNodeComponent({
           {/* Title */}
           <span className="truncate flex-1">{task.title}</span>
 
-          {/* Children count */}
-          {children.length > 0 && (
-            <span className="text-xs text-muted-foreground flex-shrink-0">
-              ({children.length})
-            </span>
-          )}
+          {/* Children count - fixed width for alignment */}
+          <span className="text-xs text-muted-foreground flex-shrink-0 w-6 text-center">
+            {children.length > 0 ? `(${children.length})` : ""}
+          </span>
 
-          {/* Due date */}
-          {task.dueDate && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-              <Calendar className="h-3 w-3" />
-              {new Date(task.dueDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          )}
+          {/* Step progress - fixed width for alignment */}
+          <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={task.steps && task.steps.length > 0 ? `${task.steps.filter(s => s.isCompleted).length}/${task.steps.length} steps` : "No steps"}>
+            {task.steps && task.steps.length > 0 ? (
+              <>
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{
+                      width: `${(task.steps.filter(s => s.isCompleted).length / task.steps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {task.steps.filter(s => s.isCompleted).length}/{task.steps.length}
+                </span>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/50">—</span>
+            )}
+          </div>
 
-          {/* Assignee */}
-          {task.assignee && (
-            <Avatar className="h-5 w-5 flex-shrink-0">
-              <AvatarImage src={task.assignee.avatarUrl || undefined} />
-              <AvatarFallback className="text-[10px]">
-                {task.assignee.name.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          )}
+          {/* Due date - fixed width for alignment */}
+          <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0 w-14">
+            {task.dueDate ? (
+              <>
+                <Calendar className="h-3 w-3" />
+                {new Date(task.dueDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </>
+            ) : (
+              <span className="text-muted-foreground/50">—</span>
+            )}
+          </span>
+
+          {/* Assignee - fixed width for alignment */}
+          <div className="w-5 flex-shrink-0">
+            {task.assignee ? (
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={task.assignee.avatarUrl || undefined} />
+                <AvatarFallback className="text-[10px]">
+                  {task.assignee.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="h-5 w-5 rounded-full border border-dashed border-border opacity-30" />
+            )}
+          </div>
         </button>
       </div>
 
@@ -271,26 +305,58 @@ export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) 
               {/* Title */}
               <span className="truncate flex-1">{task.title}</span>
 
-              {/* Due date */}
-              {task.dueDate && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(task.dueDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              )}
+              {/* Spacer for children count alignment */}
+              <span className="w-6 flex-shrink-0" />
 
-              {/* Assignee */}
-              {task.assignee && (
-                <Avatar className="h-5 w-5 flex-shrink-0">
-                  <AvatarImage src={task.assignee.avatarUrl || undefined} />
-                  <AvatarFallback className="text-[10px]">
-                    {task.assignee.name.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              )}
+              {/* Step progress - fixed width for alignment */}
+              <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={task.steps && task.steps.length > 0 ? `${task.steps.filter(s => s.isCompleted).length}/${task.steps.length} steps` : "No steps"}>
+                {task.steps && task.steps.length > 0 ? (
+                  <>
+                    <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{
+                          width: `${(task.steps.filter(s => s.isCompleted).length / task.steps.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {task.steps.filter(s => s.isCompleted).length}/{task.steps.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground/50">—</span>
+                )}
+              </div>
+
+              {/* Due date - fixed width for alignment */}
+              <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0 w-14">
+                {task.dueDate ? (
+                  <>
+                    <Calendar className="h-3 w-3" />
+                    {new Date(task.dueDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground/50">—</span>
+                )}
+              </span>
+
+              {/* Assignee - fixed width for alignment */}
+              <div className="w-5 flex-shrink-0">
+                {task.assignee ? (
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={task.assignee.avatarUrl || undefined} />
+                    <AvatarFallback className="text-[10px]">
+                      {task.assignee.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-5 w-5 rounded-full border border-dashed border-border opacity-30" />
+                )}
+              </div>
             </button>
           ))}
         </div>

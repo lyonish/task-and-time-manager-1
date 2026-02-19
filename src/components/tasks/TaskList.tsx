@@ -29,6 +29,11 @@ interface Layer {
   position: number;
 }
 
+interface Step {
+  id: string;
+  isCompleted: boolean | null;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -46,6 +51,7 @@ interface Task {
   } | null;
   status?: Status | null;
   layer?: Layer | null;
+  steps?: Step[];
 }
 
 interface Member {

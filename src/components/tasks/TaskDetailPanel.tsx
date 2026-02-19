@@ -30,6 +30,7 @@ import {
 import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
+import { StepList } from "@/components/steps/StepList";
 
 interface Status {
   id: string;
@@ -125,6 +126,16 @@ export function TaskDetailPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [steps, setSteps] = useState<Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    assigneeId: string | null;
+    dueDate: Date | null;
+    isCompleted: boolean | null;
+    assignee?: { id: string; name: string; avatarUrl: string | null } | null;
+  }>>([]);
+  const [isLoadingSteps, setIsLoadingSteps] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -137,6 +148,7 @@ export function TaskDetailPanel({
       setPriority(task.priority);
       setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "");
       loadComments(task.id);
+      loadSteps(task.id);
     }
   }, [task]);
 
@@ -152,6 +164,21 @@ export function TaskDetailPanel({
       console.error("Failed to load comments", error);
     } finally {
       setIsLoadingComments(false);
+    }
+  };
+
+  const loadSteps = async (taskId: string) => {
+    setIsLoadingSteps(true);
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/steps`);
+      if (response.ok) {
+        const data = await response.json();
+        setSteps(data);
+      }
+    } catch (error) {
+      console.error("Failed to load steps", error);
+    } finally {
+      setIsLoadingSteps(false);
     }
   };
 
@@ -748,6 +775,22 @@ export function TaskDetailPanel({
               placeholder="Add a description..."
               rows={4}
             />
+          </div>
+
+          {/* Steps */}
+          <div className="border-t pt-4">
+            {isLoadingSteps ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <StepList
+                taskId={task.id}
+                steps={steps}
+                members={members}
+                onStepsChange={() => loadSteps(task.id)}
+              />
+            )}
           </div>
 
           {/* Comments */}

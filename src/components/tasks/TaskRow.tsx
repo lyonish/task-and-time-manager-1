@@ -23,6 +23,11 @@ interface Status {
   isCompleted: boolean | null;
 }
 
+interface Step {
+  id: string;
+  isCompleted: boolean | null;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -37,6 +42,7 @@ interface Task {
     avatarUrl: string | null;
   } | null;
   status?: Status | null;
+  steps?: Step[];
 }
 
 interface Member {
@@ -137,46 +143,73 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
         {task.title}
       </button>
 
+      {/* Step progress - fixed width for alignment */}
+      <div className="flex items-center gap-1.5 w-28 flex-shrink-0" title={task.steps && task.steps.length > 0 ? `${task.steps.filter(s => s.isCompleted).length}/${task.steps.length} steps` : "No steps"}>
+        {task.steps && task.steps.length > 0 ? (
+          <>
+            <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{
+                  width: `${(task.steps.filter(s => s.isCompleted).length / task.steps.length) * 100}%`,
+                }}
+              />
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {task.steps.filter(s => s.isCompleted).length}/{task.steps.length}
+            </span>
+          </>
+        ) : (
+          <span className="text-[10px] text-muted-foreground/50">—</span>
+        )}
+      </div>
+
       {/* Priority indicator */}
       <span
         className={cn(
-          "w-2 h-2 rounded-full",
+          "w-2 h-2 rounded-full flex-shrink-0",
           task.priority === "None" ? "border-[1.5px] border-gray-500" : priorityColors[task.priority]
         )}
         title={task.priority}
       />
 
-      {/* Due Date */}
-      {task.dueDate && (
-        <span
-          className={cn(
-            "text-xs flex items-center gap-1",
-            isOverdue ? "text-red-500" : "text-muted-foreground"
-          )}
-        >
-          <Calendar className="h-3 w-3" />
-          {formatDueDate(task.dueDate)}
-        </span>
-      )}
+      {/* Due Date - fixed width for alignment */}
+      <span
+        className={cn(
+          "text-xs flex items-center gap-1 w-16 flex-shrink-0",
+          task.dueDate && isOverdue ? "text-red-500" : "text-muted-foreground"
+        )}
+      >
+        {task.dueDate ? (
+          <>
+            <Calendar className="h-3 w-3" />
+            {formatDueDate(task.dueDate)}
+          </>
+        ) : (
+          <span className="text-muted-foreground/50">—</span>
+        )}
+      </span>
 
-      {/* Assignee */}
-      {task.assignee ? (
-        <Avatar className="h-6 w-6">
-          <AvatarImage src={task.assignee.avatarUrl || undefined} />
-          <AvatarFallback className="text-xs">
-            {task.assignee.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)}
-          </AvatarFallback>
-        </Avatar>
-      ) : (
-        <div className="h-6 w-6 rounded-full border-2 border-dashed border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <User className="h-3 w-3 text-muted-foreground" />
-        </div>
-      )}
+      {/* Assignee - fixed width for alignment */}
+      <div className="w-6 flex-shrink-0">
+        {task.assignee ? (
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={task.assignee.avatarUrl || undefined} />
+            <AvatarFallback className="text-xs">
+              {task.assignee.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="h-6 w-6 rounded-full border-2 border-dashed border-border flex items-center justify-center opacity-30">
+            <User className="h-3 w-3 text-muted-foreground" />
+          </div>
+        )}
+      </div>
 
       {/* Actions */}
       <DropdownMenu>

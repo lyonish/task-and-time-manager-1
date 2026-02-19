@@ -36,6 +36,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   createdProjects: many(projects),
   assignedTasks: many(tasks, { relationName: "assignee" }),
   createdTasks: many(tasks, { relationName: "creator" }),
+  assignedSteps: many(steps),
   comments: many(comments),
   mentions: many(mentions),
   activityLogs: many(activityLogs),
@@ -265,8 +266,46 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     references: [users.id],
     relationName: "creator",
   }),
+  steps: many(steps),
   comments: many(comments),
   activityLogs: many(activityLogs),
+}));
+
+// =============================================
+// STEPS (Pseudo-tasks within tasks)
+// =============================================
+export const steps = mysqlTable(
+  "steps",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    taskId: varchar("task_id", { length: 36 }).notNull(),
+    title: varchar("title", { length: 500 }).notNull(),
+    description: text("description"),
+    assigneeId: varchar("assignee_id", { length: 36 }),
+    dueDate: timestamp("due_date"),
+    position: int("position").notNull().default(0),
+    isCompleted: boolean("is_completed").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index("idx_steps_task").on(table.taskId),
+    index("idx_steps_position").on(table.taskId, table.position),
+    index("idx_steps_assignee").on(table.assigneeId),
+  ]
+);
+
+export const stepsRelations = relations(steps, ({ one }) => ({
+  task: one(tasks, {
+    fields: [steps.taskId],
+    references: [tasks.id],
+  }),
+  assignee: one(users, {
+    fields: [steps.assigneeId],
+    references: [users.id],
+  }),
 }));
 
 // =============================================
@@ -401,6 +440,8 @@ export type WorkflowStatus = typeof workflowStatuses.$inferSelect;
 export type NewWorkflowStatus = typeof workflowStatuses.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+export type Step = typeof steps.$inferSelect;
+export type NewStep = typeof steps.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
 export type Mention = typeof mentions.$inferSelect;
