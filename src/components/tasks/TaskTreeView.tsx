@@ -49,17 +49,21 @@ const priorityColors: Record<string, string> = {
   None: "#6b7280",
 };
 
-function buildTree(tasks: Task[]): TreeNode[] {
+function buildTree(tasks: Task[]): { tree: TreeNode[]; unlayered: Task[] } {
+  // Separate layered and unlayered tasks
+  const layeredTasks = tasks.filter((t) => t.layerId);
+  const unlayeredTasks = tasks.filter((t) => !t.layerId);
+
   const taskMap = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
-  // Create nodes for all tasks
-  tasks.forEach((task) => {
+  // Create nodes for layered tasks only
+  layeredTasks.forEach((task) => {
     taskMap.set(task.id, { task, children: [], depth: 0 });
   });
 
   // Build tree structure
-  tasks.forEach((task) => {
+  layeredTasks.forEach((task) => {
     const node = taskMap.get(task.id)!;
     if (task.parentTaskId && taskMap.has(task.parentTaskId)) {
       const parent = taskMap.get(task.parentTaskId)!;
@@ -78,7 +82,7 @@ function buildTree(tasks: Task[]): TreeNode[] {
   }
   setDepths(roots, 0);
 
-  return roots;
+  return { tree: roots, unlayered: unlayeredTasks };
 }
 
 function TreeNodeComponent({
@@ -218,7 +222,7 @@ function TreeNodeComponent({
 }
 
 export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) {
-  const tree = useMemo(() => buildTree(tasks), [tasks]);
+  const { tree, unlayered } = useMemo(() => buildTree(tasks), [tasks]);
 
   if (tasks.length === 0) {
     return (
@@ -228,16 +232,9 @@ export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) 
     );
   }
 
-  if (tree.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No root tasks found.
-      </div>
-    );
-  }
-
   return (
     <div>
+      {/* Layered tasks tree */}
       {tree.map((node, index) => (
         <TreeNodeComponent
           key={node.task.id}
@@ -248,6 +245,56 @@ export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) 
           activeLines={new Map()}
         />
       ))}
+
+      {/* Unlayered tasks section */}
+      {unlayered.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="text-sm text-muted-foreground mb-2 px-2">
+            No Layer ({unlayered.length})
+          </div>
+          {unlayered.map((task) => (
+            <button
+              key={task.id}
+              onClick={() => onTaskClick?.(task)}
+              className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent transition-colors text-left w-full"
+            >
+              {/* Priority dot */}
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={
+                  task.priority === "None"
+                    ? { border: "1.5px solid #6b7280" }
+                    : { backgroundColor: priorityColors[task.priority] }
+                }
+              />
+
+              {/* Title */}
+              <span className="truncate flex-1">{task.title}</span>
+
+              {/* Due date */}
+              {task.dueDate && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(task.dueDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              )}
+
+              {/* Assignee */}
+              {task.assignee && (
+                <Avatar className="h-5 w-5 flex-shrink-0">
+                  <AvatarImage src={task.assignee.avatarUrl || undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {task.assignee.name.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

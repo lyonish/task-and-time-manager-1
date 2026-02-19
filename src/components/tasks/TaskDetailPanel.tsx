@@ -568,15 +568,23 @@ export function TaskDetailPanel({
 
             {/* Create Derived Task */}
             {layers.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreateDerivedTask}
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create derived task
-              </Button>
+              <div className="space-y-1 mt-4 pl-6 pr-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateDerivedTask}
+                  className="w-full"
+                  disabled={!layerId}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create derived task
+                </Button>
+                {!layerId && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Assign a layer to enable
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
