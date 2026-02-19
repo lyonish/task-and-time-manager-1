@@ -76,48 +76,63 @@ function TreeNodeComponent({
   node,
   onTaskClick,
   isLast,
-  parentLines,
+  parentLayerPosition,
+  activeLines,
 }: {
   node: TreeNode;
   onTaskClick?: (task: Task) => void;
   isLast: boolean;
-  parentLines: boolean[];
+  parentLayerPosition: number;
+  activeLines: Map<number, boolean>; // layer position -> has continuing line
 }) {
   const { task, children } = node;
-  const isRoot = node.depth === 0;
+  const layerPosition = task.layer?.position ?? 0;
+  const isRoot = parentLayerPosition < 0;
+
+  const INDENT_WIDTH = 28; // w-7 = 28px
 
   return (
     <div className="relative">
-      <div className="flex">
-        {/* Vertical continuation lines from ancestors */}
-        {parentLines.map((showLine, i) => (
-          <div key={i} className="w-7 flex-shrink-0 relative">
-            {showLine && (
-              <div className="absolute left-[18px] top-0 bottom-0 w-px bg-border" />
-            )}
-          </div>
-        ))}
+      <div className="flex items-center">
+        {/* Render columns for each layer level up to current */}
+        {Array.from({ length: layerPosition }).map((_, colIndex) => {
+          const isParentColumn = colIndex === parentLayerPosition;
+          const hasActiveLine = activeLines.get(colIndex);
+          const isLastColumn = colIndex === layerPosition - 1;
 
-        {/* L-shaped connector for non-root nodes */}
-        {!isRoot && (
-          <div className="w-7 flex-shrink-0 relative">
-            {/* Vertical line from top to middle - aligned with parent dot center (px-3 + w-3/2 = ~18px) */}
-            <div className="absolute left-[18px] top-0 h-5 w-px bg-border" />
-            {/* Horizontal line turning right */}
-            <div className="absolute left-[18px] top-5 w-[10px] h-px bg-border" />
-            {/* Continue vertical line if not last sibling */}
-            {!isLast && (
-              <div className="absolute left-[18px] top-5 bottom-0 w-px bg-border" />
-            )}
-          </div>
-        )}
+          return (
+            <div key={colIndex} className="w-7 flex-shrink-0 relative h-10">
+              {/* Vertical continuation line from ancestors */}
+              {hasActiveLine && !isParentColumn && (
+                <div className="absolute left-[13px] top-0 bottom-0 w-px bg-border" />
+              )}
+
+              {/* L-connector at parent's column */}
+              {isParentColumn && !isRoot && (
+                <>
+                  {/* Vertical line from top */}
+                  <div className="absolute left-[13px] top-0 h-5 w-px bg-border" />
+                  {/* Horizontal line going right */}
+                  <div
+                    className="absolute left-[13px] top-5 h-px bg-border"
+                    style={{ width: INDENT_WIDTH * (layerPosition - parentLayerPosition) - 8 }}
+                  />
+                  {/* Continue vertical if not last sibling */}
+                  {!isLast && (
+                    <div className="absolute left-[13px] top-5 bottom-0 w-px bg-border" />
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
 
         {/* Task node */}
         <button
           onClick={() => onTaskClick?.(task)}
           className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left flex-1 min-w-0",
-            isRoot && "font-medium"
+            "flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent transition-colors text-left flex-1 min-w-0",
+            layerPosition === 0 && "font-medium"
           )}
         >
           {/* Priority dot */}
@@ -145,15 +160,27 @@ function TreeNodeComponent({
       {/* Children */}
       {children.length > 0 && (
         <div>
-          {children.map((child, index) => (
-            <TreeNodeComponent
-              key={child.task.id}
-              node={child}
-              onTaskClick={onTaskClick}
-              isLast={index === children.length - 1}
-              parentLines={isRoot ? [] : [...parentLines, !isLast]}
-            />
-          ))}
+          {children.map((child, index) => {
+            const isLastChild = index === children.length - 1;
+            // Update active lines for children
+            const newActiveLines = new Map(activeLines);
+            // Current task's column has a line if this isn't the last child
+            if (!isLastChild) {
+              newActiveLines.set(layerPosition, true);
+            } else {
+              newActiveLines.delete(layerPosition);
+            }
+            return (
+              <TreeNodeComponent
+                key={child.task.id}
+                node={child}
+                onTaskClick={onTaskClick}
+                isLast={isLastChild}
+                parentLayerPosition={layerPosition}
+                activeLines={newActiveLines}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -180,14 +207,15 @@ export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) 
   }
 
   return (
-    <div className="space-y-1">
+    <div>
       {tree.map((node, index) => (
         <TreeNodeComponent
           key={node.task.id}
           node={node}
           onTaskClick={onTaskClick}
           isLast={index === tree.length - 1}
-          parentLines={[]}
+          parentLayerPosition={-1}
+          activeLines={new Map()}
         />
       ))}
     </div>
