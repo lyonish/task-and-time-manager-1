@@ -353,6 +353,12 @@ export function TaskDetailPanel({
   // Filter out current task and its descendants for parent selection
   const availableParentTasks = tasks.filter((t) => t.id !== task.id);
 
+  // Filter layers based on parent task's layer - can only assign lower layer (stricter WBS)
+  const parentLayer = currentParentTask?.layer;
+  const availableLayers = parentLayer
+    ? layers.filter((l) => l.position > parentLayer.position)
+    : layers;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto px-6">
@@ -522,7 +528,7 @@ export function TaskDetailPanel({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {layers.map((layer) => (
+                    {availableLayers.map((layer) => (
                       <SelectItem key={layer.id} value={layer.id}>
                         <span className="flex items-center gap-2">
                           <span
