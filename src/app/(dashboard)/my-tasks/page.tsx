@@ -73,7 +73,7 @@ export default async function MyTasksPage() {
                     <span
                       className={`w-2 h-2 rounded-full ${
                         task.priority === "None"
-                          ? "border-[1.5px] border-gray-400"
+                          ? "border-[1.5px] border-gray-500"
                           : priorityColors[task.priority]
                       }`}
                     />

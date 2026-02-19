@@ -141,7 +141,7 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       <span
         className={cn(
           "w-2 h-2 rounded-full",
-          task.priority === "None" ? "border-[1.5px] border-gray-400" : priorityColors[task.priority]
+          task.priority === "None" ? "border-[1.5px] border-gray-500" : priorityColors[task.priority]
         )}
         title={task.priority}
       />

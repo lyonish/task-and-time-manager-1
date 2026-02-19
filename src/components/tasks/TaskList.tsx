@@ -73,7 +73,7 @@ const priorityColors: Record<string, string> = {
   High: "#f97316",
   Medium: "#eab308",
   Low: "#9ca3af",
-  None: "#9ca3af",
+  None: "#6b7280",
 };
 
 interface Group {
