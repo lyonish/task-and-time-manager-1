@@ -315,7 +315,7 @@ export function TaskDetailPanel({
     // Find the next layer (one level below current)
     const sortedLayers = [...layers].sort((a, b) => a.position - b.position);
     const currentLayerIndex = sortedLayers.findIndex((l) => l.id === task.layerId);
-    const nextLayer = currentLayerIndex >= 0 && currentLayerIndex < sortedLayers.length - 1
+    let nextLayer = currentLayerIndex >= 0 && currentLayerIndex < sortedLayers.length - 1
       ? sortedLayers[currentLayerIndex + 1]
       : null;
 
@@ -323,6 +323,24 @@ export function TaskDetailPanel({
       // Get project ID from the current task's URL or context
       const projectId = window.location.pathname.match(/project\/([^/]+)/)?.[1];
       if (!projectId) throw new Error("Project ID not found");
+
+      // If no next layer exists, create a new one
+      let newLayerCreated = false;
+      if (!nextLayer) {
+        const newLayerNum = layers.length + 1;
+        const newLayerName = `Layer ${newLayerNum}`;
+
+        const layerResponse = await fetch(`/api/projects/${projectId}/layers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newLayerName }),
+        });
+
+        if (!layerResponse.ok) throw new Error("Failed to create layer");
+
+        nextLayer = await layerResponse.json();
+        newLayerCreated = true;
+      }
 
       const response = await fetch(`/api/projects/${projectId}/tasks`, {
         method: "POST",
@@ -338,7 +356,12 @@ export function TaskDetailPanel({
       if (!response.ok) throw new Error("Failed to create task");
 
       router.refresh();
-      toast.success("Derived task created");
+
+      if (newLayerCreated && nextLayer) {
+        toast.success(`${nextLayer.name} is created below the lowest layer. You can edit from 'Layers'.`);
+      } else {
+        toast.success("Derived task created");
+      }
     } catch {
       toast.error("Failed to create derived task");
     }

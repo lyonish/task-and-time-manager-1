@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -261,6 +261,11 @@ export function LayerSettings({ projectId, layers: initialLayers }: LayerSetting
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#6366f1");
+
+  // Sync local state with prop when it changes (e.g., layer created externally)
+  useEffect(() => {
+    setLayers(initialLayers);
+  }, [initialLayers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
