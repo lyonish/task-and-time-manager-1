@@ -99,8 +99,8 @@ const priorityColors: Record<string, string> = {
   Urgent: "text-red-500",
   High: "text-orange-500",
   Medium: "text-yellow-500",
-  Low: "text-blue-500",
-  None: "text-muted-foreground",
+  Low: "text-gray-400",
+  None: "text-gray-400",
 };
 
 export function TaskDetailPanel({

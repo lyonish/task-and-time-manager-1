@@ -57,8 +57,8 @@ const priorityColors: Record<string, string> = {
   Urgent: "bg-red-500",
   High: "bg-orange-500",
   Medium: "bg-yellow-500",
-  Low: "bg-blue-500",
-  None: "",
+  Low: "bg-gray-400",
+  None: "bg-foreground",
 };
 
 export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
@@ -138,12 +138,13 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       </button>
 
       {/* Priority indicator */}
-      {task.priority !== "None" && (
-        <span
-          className={cn("w-2 h-2 rounded-full", priorityColors[task.priority])}
-          title={task.priority}
-        />
-      )}
+      <span
+        className={cn(
+          "w-2 h-2 rounded-full",
+          task.priority === "None" ? "border-[1.5px] border-gray-400" : priorityColors[task.priority]
+        )}
+        title={task.priority}
+      />
 
       {/* Due Date */}
       {task.dueDate && (

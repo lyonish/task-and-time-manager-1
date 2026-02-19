@@ -72,7 +72,7 @@ const priorityColors: Record<string, string> = {
   Urgent: "#ef4444",
   High: "#f97316",
   Medium: "#eab308",
-  Low: "#3b82f6",
+  Low: "#9ca3af",
   None: "#9ca3af",
 };
 

@@ -36,7 +36,7 @@ const priorityColors: Record<string, string> = {
   Urgent: "#ef4444",
   High: "#f97316",
   Medium: "#eab308",
-  Low: "#3b82f6",
+  Low: "#9ca3af",
   None: "#9ca3af",
 };
 
@@ -123,7 +123,11 @@ function TreeNodeComponent({
           {/* Priority dot */}
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: priorityColors[task.priority] }}
+            style={
+              task.priority === "None"
+                ? { border: "1.5px solid #9ca3af" }
+                : { backgroundColor: priorityColors[task.priority] }
+            }
           />
 
           {/* Title */}

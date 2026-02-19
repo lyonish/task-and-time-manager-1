@@ -11,8 +11,8 @@ const priorityColors: Record<string, string> = {
   Urgent: "bg-red-500",
   High: "bg-orange-500",
   Medium: "bg-yellow-500",
-  Low: "bg-blue-500",
-  None: "bg-muted-foreground",
+  Low: "bg-gray-400",
+  None: "bg-foreground",
 };
 
 async function getMyTasks(userId: string) {
@@ -70,13 +70,13 @@ export default async function MyTasksPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {task.priority !== "None" && (
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          priorityColors[task.priority]
-                        }`}
-                      />
-                    )}
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        task.priority === "None"
+                          ? "border-[1.5px] border-gray-400"
+                          : priorityColors[task.priority]
+                      }`}
+                    />
                     {task.status && (
                       <Badge
                         variant="outline"
