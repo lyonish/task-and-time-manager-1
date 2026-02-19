@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar } from "lucide-react";
 
 interface Layer {
   id: string;
@@ -16,7 +18,14 @@ interface Task {
   statusId: string | null;
   layerId: string | null;
   parentTaskId: string | null;
+  assigneeId: string | null;
+  dueDate: Date | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
+  assignee?: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
   layer?: Layer | null;
 }
 
@@ -146,13 +155,34 @@ function TreeNodeComponent({
           />
 
           {/* Title */}
-          <span className="truncate">{task.title}</span>
+          <span className="truncate flex-1">{task.title}</span>
 
           {/* Children count */}
           {children.length > 0 && (
             <span className="text-xs text-muted-foreground flex-shrink-0">
               ({children.length})
             </span>
+          )}
+
+          {/* Due date */}
+          {task.dueDate && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+              <Calendar className="h-3 w-3" />
+              {new Date(task.dueDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+          )}
+
+          {/* Assignee */}
+          {task.assignee && (
+            <Avatar className="h-5 w-5 flex-shrink-0">
+              <AvatarImage src={task.assignee.avatarUrl || undefined} />
+              <AvatarFallback className="text-[10px]">
+                {task.assignee.name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           )}
         </button>
       </div>
