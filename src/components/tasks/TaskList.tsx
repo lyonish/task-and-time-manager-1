@@ -31,6 +31,7 @@ interface Layer {
 
 interface Step {
   id: string;
+  statusId: string;
   isCompleted: boolean | null;
 }
 

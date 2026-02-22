@@ -8,9 +8,15 @@ import { z } from "zod";
 
 const createStepSchema = z.object({
   title: z.string().min(1).max(500),
+  statusId: z.string().uuid().optional(), // If not provided, uses task's current status
   description: z.string().max(5000).optional(),
   assigneeId: z.string().uuid().optional(),
   dueDate: z.string().datetime().optional(),
+});
+
+const reorderSchema = z.object({
+  statusId: z.string().uuid(),
+  orderedIds: z.array(z.string().uuid()),
 });
 
 export async function GET(
@@ -44,6 +50,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Get all steps for this task (grouped by status)
     const steps = await StepService.getSteps(taskId);
     return NextResponse.json(steps);
   } catch (error) {
@@ -96,8 +103,18 @@ export async function POST(
       );
     }
 
+    // Use task's current status if statusId not provided
+    const statusId = parsed.data.statusId || task.statusId;
+    if (!statusId) {
+      return NextResponse.json(
+        { error: "Task has no status and no statusId provided" },
+        { status: 400 }
+      );
+    }
+
     const step = await StepService.createStep(taskId, {
       ...parsed.data,
+      statusId,
       dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
     });
 
@@ -143,16 +160,20 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { orderedIds } = body;
+    const parsed = reorderSchema.safeParse(body);
 
-    if (!Array.isArray(orderedIds)) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "orderedIds must be an array" },
+        { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const steps = await StepService.reorderSteps(taskId, orderedIds);
+    const steps = await StepService.reorderSteps(
+      taskId,
+      parsed.data.statusId,
+      parsed.data.orderedIds
+    );
     return NextResponse.json(steps);
   } catch (error) {
     console.error("Reorder steps error:", error);

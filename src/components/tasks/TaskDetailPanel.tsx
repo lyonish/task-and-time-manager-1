@@ -130,10 +130,12 @@ export function TaskDetailPanel({
     id: string;
     title: string;
     description: string | null;
+    statusId: string;
     assigneeId: string | null;
     dueDate: Date | null;
     isCompleted: boolean | null;
     assignee?: { id: string; name: string; avatarUrl: string | null } | null;
+    status?: { id: string; name: string; color: string | null } | null;
   }>>([]);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
 
@@ -786,7 +788,9 @@ export function TaskDetailPanel({
             ) : (
               <StepList
                 taskId={task.id}
+                currentStatusId={statusId}
                 steps={steps}
+                statuses={statuses}
                 members={members}
                 onStepsChange={() => loadSteps(task.id)}
               />

@@ -281,6 +281,7 @@ export const steps = mysqlTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     taskId: varchar("task_id", { length: 36 }).notNull(),
+    statusId: varchar("status_id", { length: 36 }).notNull(),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description"),
     assigneeId: varchar("assignee_id", { length: 36 }),
@@ -292,7 +293,8 @@ export const steps = mysqlTable(
   },
   (table) => [
     index("idx_steps_task").on(table.taskId),
-    index("idx_steps_position").on(table.taskId, table.position),
+    index("idx_steps_status").on(table.taskId, table.statusId),
+    index("idx_steps_position").on(table.taskId, table.statusId, table.position),
     index("idx_steps_assignee").on(table.assigneeId),
   ]
 );
@@ -301,6 +303,10 @@ export const stepsRelations = relations(steps, ({ one }) => ({
   task: one(tasks, {
     fields: [steps.taskId],
     references: [tasks.id],
+  }),
+  status: one(workflowStatuses, {
+    fields: [steps.statusId],
+    references: [workflowStatuses.id],
   }),
   assignee: one(users, {
     fields: [steps.assigneeId],

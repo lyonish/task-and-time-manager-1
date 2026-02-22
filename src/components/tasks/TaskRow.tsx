@@ -25,6 +25,7 @@ interface Status {
 
 interface Step {
   id: string;
+  statusId: string;
   isCompleted: boolean | null;
 }
 
@@ -143,26 +144,33 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
         {task.title}
       </button>
 
-      {/* Step progress - fixed width for alignment */}
-      <div className="flex items-center gap-1.5 w-28 flex-shrink-0" title={task.steps && task.steps.length > 0 ? `${task.steps.filter(s => s.isCompleted).length}/${task.steps.length} steps` : "No steps"}>
-        {task.steps && task.steps.length > 0 ? (
-          <>
-            <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{
-                  width: `${(task.steps.filter(s => s.isCompleted).length / task.steps.length) * 100}%`,
-                }}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground">
-              {task.steps.filter(s => s.isCompleted).length}/{task.steps.length}
-            </span>
-          </>
-        ) : (
-          <span className="text-[10px] text-muted-foreground/50">—</span>
-        )}
-      </div>
+      {/* Step progress - fixed width for alignment (shows current status steps only) */}
+      {(() => {
+        const currentStatusSteps = task.steps?.filter(s => s.statusId === task.statusId) || [];
+        const completedCount = currentStatusSteps.filter(s => s.isCompleted).length;
+        const totalCount = currentStatusSteps.length;
+        return (
+          <div className="flex items-center gap-1.5 w-28 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps in current status` : "No steps"}>
+            {totalCount > 0 ? (
+              <>
+                <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{
+                      width: `${(completedCount / totalCount) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {completedCount}/{totalCount}
+                </span>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/50">—</span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Priority indicator */}
       <span
