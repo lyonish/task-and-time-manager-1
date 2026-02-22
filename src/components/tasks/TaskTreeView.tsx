@@ -174,13 +174,13 @@ function TreeNodeComponent({
             {children.length > 0 ? `(${children.length})` : ""}
           </span>
 
-          {/* Step progress - fixed width for alignment (shows current status steps only) */}
+          {/* Step progress - fixed width for alignment (shows overall progress) */}
           {(() => {
-            const currentStatusSteps = task.steps?.filter(s => s.statusId === task.statusId) || [];
-            const completedCount = currentStatusSteps.filter(s => s.isCompleted).length;
-            const totalCount = currentStatusSteps.length;
+            const allSteps = task.steps || [];
+            const completedCount = allSteps.filter(s => s.isCompleted).length;
+            const totalCount = allSteps.length;
             return (
-              <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps in current status` : "No steps"}>
+              <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps completed` : "No steps"}>
                 {totalCount > 0 ? (
                   <>
                     <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
@@ -316,13 +316,13 @@ export function TaskTreeView({ tasks, layers, onTaskClick }: TaskTreeViewProps) 
               {/* Spacer for children count alignment */}
               <span className="w-6 flex-shrink-0" />
 
-              {/* Step progress - fixed width for alignment (shows current status steps only) */}
+              {/* Step progress - fixed width for alignment (shows overall progress) */}
               {(() => {
-                const currentStatusSteps = task.steps?.filter(s => s.statusId === task.statusId) || [];
-                const completedCount = currentStatusSteps.filter(s => s.isCompleted).length;
-                const totalCount = currentStatusSteps.length;
+                const allSteps = task.steps || [];
+                const completedCount = allSteps.filter(s => s.isCompleted).length;
+                const totalCount = allSteps.length;
                 return (
-                  <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps in current status` : "No steps"}>
+                  <div className="flex items-center gap-1.5 w-24 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps completed` : "No steps"}>
                     {totalCount > 0 ? (
                       <>
                         <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
