@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Layers, List, GitBranch } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, List, GitBranch, Minimize2, Maximize2 } from "lucide-react";
 import { TaskTreeView } from "./TaskTreeView";
 import { Button } from "@/components/ui/button";
 
@@ -96,6 +96,7 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [isCompact, setIsCompact] = useState(false);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -204,29 +205,47 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
             </Select>
           </div>
 
-          {/* View Mode Toggle - only show when grouped by layer */}
-          {groupBy === "layer" && (
-            <div className="flex items-center gap-1 border rounded-md p-0.5">
-              <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 px-2"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4 mr-1" />
-                List
-              </Button>
-              <Button
-                variant={viewMode === "tree" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 px-2"
-                onClick={() => setViewMode("tree")}
-              >
-                <GitBranch className="h-4 w-4 mr-1" />
-                Tree
-              </Button>
-            </div>
-          )}
+          {/* View Controls */}
+          <div className="flex items-center gap-2">
+            {/* Compact Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsCompact(!isCompact)}
+              title={isCompact ? "Normal view" : "Compact view"}
+            >
+              {isCompact ? (
+                <Maximize2 className="h-4 w-4" />
+              ) : (
+                <Minimize2 className="h-4 w-4" />
+              )}
+            </Button>
+
+            {/* View Mode Toggle - only show when grouped by layer */}
+            {groupBy === "layer" && (
+              <div className="flex items-center gap-1 border rounded-md p-0.5">
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4 mr-1" />
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === "tree" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => setViewMode("tree")}
+                >
+                  <GitBranch className="h-4 w-4 mr-1" />
+                  Tree
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Task View */}
@@ -235,6 +254,7 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
             tasks={tasks}
             layers={layers}
             onTaskClick={handleTaskClick}
+            isCompact={isCompact}
           />
         ) : (
           <>
@@ -277,6 +297,7 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
                           statuses={statuses}
                           members={members}
                           onClick={() => handleTaskClick(task)}
+                          isCompact={isCompact}
                         />
                       ))}
                     </div>

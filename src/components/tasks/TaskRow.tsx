@@ -58,6 +58,7 @@ interface TaskRowProps {
   statuses: Status[];
   members: Member[];
   onClick?: () => void;
+  isCompact?: boolean;
 }
 
 const priorityColors: Record<string, string> = {
@@ -68,7 +69,7 @@ const priorityColors: Record<string, string> = {
   None: "bg-foreground",
 };
 
-export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
+export function TaskRow({ task, statuses, members, onClick, isCompact = false }: TaskRowProps) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -122,7 +123,8 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors",
+        "group flex items-center gap-3 px-3 rounded-md hover:bg-accent transition-colors",
+        isCompact ? "py-1 gap-2" : "py-2",
         isUpdating && "opacity-50 pointer-events-none"
       )}
     >
@@ -137,7 +139,8 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       <button
         onClick={onClick}
         className={cn(
-          "flex-1 text-sm truncate text-left hover:text-primary transition-colors",
+          "flex-1 truncate text-left hover:text-primary transition-colors",
+          isCompact ? "text-xs" : "text-sm",
           isCompleted && "line-through text-muted-foreground"
         )}
       >
@@ -150,7 +153,10 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
         const completedCount = allSteps.filter(s => s.isCompleted).length;
         const totalCount = allSteps.length;
         return (
-          <div className="flex items-center gap-1.5 w-28 flex-shrink-0" title={totalCount > 0 ? `${completedCount}/${totalCount} steps completed` : "No steps"}>
+          <div
+            className="flex items-center gap-1.5 w-28 flex-shrink-0"
+            title={totalCount > 0 ? `${completedCount}/${totalCount} steps completed` : "No steps"}
+          >
             {totalCount > 0 ? (
               <>
                 <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
@@ -161,12 +167,18 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-muted-foreground">
+                <span className={cn(
+                  "text-muted-foreground",
+                  isCompact ? "text-[9px]" : "text-[10px]"
+                )}>
                   {completedCount}/{totalCount}
                 </span>
               </>
             ) : (
-              <span className="text-[10px] text-muted-foreground/50">—</span>
+              <span className={cn(
+                "text-muted-foreground/50",
+                isCompact ? "text-[9px]" : "text-[10px]"
+              )}>—</span>
             )}
           </div>
         );
@@ -184,7 +196,8 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       {/* Due Date - fixed width for alignment */}
       <span
         className={cn(
-          "text-xs flex items-center gap-1 w-16 flex-shrink-0",
+          "flex items-center gap-1 w-16 flex-shrink-0",
+          isCompact ? "text-[10px]" : "text-xs",
           task.dueDate && isOverdue ? "text-red-500" : "text-muted-foreground"
         )}
       >
@@ -201,9 +214,9 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
       {/* Assignee - fixed width for alignment */}
       <div className="w-6 flex-shrink-0">
         {task.assignee ? (
-          <Avatar className="h-6 w-6">
+          <Avatar className={isCompact ? "h-5 w-5" : "h-6 w-6"}>
             <AvatarImage src={task.assignee.avatarUrl || undefined} />
-            <AvatarFallback className="text-xs">
+            <AvatarFallback className={isCompact ? "text-[9px]" : "text-xs"}>
               {task.assignee.name
                 .split(" ")
                 .map((n) => n[0])
@@ -213,8 +226,11 @@ export function TaskRow({ task, statuses, members, onClick }: TaskRowProps) {
             </AvatarFallback>
           </Avatar>
         ) : (
-          <div className="h-6 w-6 rounded-full border-2 border-dashed border-border flex items-center justify-center opacity-30">
-            <User className="h-3 w-3 text-muted-foreground" />
+          <div className={cn(
+            "rounded-full border-2 border-dashed border-border flex items-center justify-center opacity-30",
+            isCompact ? "h-5 w-5" : "h-6 w-6"
+          )}>
+            <User className="h-3 w-3" />
           </div>
         )}
       </div>
