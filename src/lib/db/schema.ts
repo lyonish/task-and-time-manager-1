@@ -40,6 +40,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   mentions: many(mentions),
   activityLogs: many(activityLogs),
+  workLogs: many(workLogs),
 }));
 
 // =============================================
@@ -269,6 +270,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   steps: many(steps),
   comments: many(comments),
   activityLogs: many(activityLogs),
+  workLogs: many(workLogs),
 }));
 
 // =============================================
@@ -375,6 +377,41 @@ export const mentionsRelations = relations(mentions, ({ one }) => ({
 }));
 
 // =============================================
+// WORK LOGS
+// =============================================
+export const workLogs = mysqlTable(
+  "work_logs",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    taskId: varchar("task_id", { length: 36 }),
+    startTime: timestamp("start_time").notNull(),
+    endTime: timestamp("end_time"),
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index("idx_work_logs_user").on(table.userId),
+    index("idx_work_logs_task").on(table.taskId),
+    index("idx_work_logs_start").on(table.userId, table.startTime),
+  ]
+);
+
+export const workLogsRelations = relations(workLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [workLogs.userId],
+    references: [users.id],
+  }),
+  task: one(tasks, {
+    fields: [workLogs.taskId],
+    references: [tasks.id],
+  }),
+}));
+
+// =============================================
 // ACTIVITY LOG
 // =============================================
 export const activityLogs = mysqlTable(
@@ -454,3 +491,5 @@ export type Mention = typeof mentions.$inferSelect;
 export type NewMention = typeof mentions.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
+export type WorkLog = typeof workLogs.$inferSelect;
+export type NewWorkLog = typeof workLogs.$inferInsert;

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1772418295631,
+      "tag": "0000_short_rumiko_fujikawa",
+      "breakpoints": true
+    }
+  ]
+}

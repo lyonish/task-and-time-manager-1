@@ -27,7 +27,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus } from "lucide-react";
+import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus, ChevronRight, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
 import { StepList } from "@/components/steps/StepList";
@@ -138,6 +139,16 @@ export function TaskDetailPanel({
     status?: { id: string; name: string; color: string | null } | null;
   }>>([]);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
+  const [workLogs, setWorkLogs] = useState<Array<{
+    id: string;
+    startTime: string;
+    endTime: string | null;
+    note: string | null;
+    user: { id: string; name: string; avatarUrl: string | null };
+  }>>([]);
+  const [isLoadingWorkLogs, setIsLoadingWorkLogs] = useState(false);
+  const [workLogsExpanded, setWorkLogsExpanded] = useState(false);
+  const [workLogsLoaded, setWorkLogsLoaded] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -151,6 +162,9 @@ export function TaskDetailPanel({
       setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "");
       loadComments(task.id);
       loadSteps(task.id);
+      setWorkLogs([]);
+      setWorkLogsExpanded(false);
+      setWorkLogsLoaded(false);
     }
   }, [task]);
 
@@ -167,6 +181,30 @@ export function TaskDetailPanel({
     } finally {
       setIsLoadingComments(false);
     }
+  };
+
+  const loadWorkLogs = async (taskId: string) => {
+    setIsLoadingWorkLogs(true);
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/work-logs`);
+      if (response.ok) {
+        setWorkLogs(await response.json());
+      } else {
+        console.error("Failed to load work logs, status:", response.status, await response.text());
+      }
+    } catch (error) {
+      console.error("Failed to load work logs", error);
+    } finally {
+      setIsLoadingWorkLogs(false);
+      setWorkLogsLoaded(true);
+    }
+  };
+
+  const handleToggleWorkLogs = () => {
+    if (!workLogsExpanded && !workLogsLoaded && task) {
+      loadWorkLogs(task.id);
+    }
+    setWorkLogsExpanded((v) => !v);
   };
 
   const loadSteps = async (taskId: string) => {
@@ -794,6 +832,75 @@ export function TaskDetailPanel({
                 members={members}
                 onStepsChange={() => loadSteps(task.id)}
               />
+            )}
+          </div>
+
+          {/* Work Logs */}
+          <div className="border-t pt-4">
+            <button
+              onClick={handleToggleWorkLogs}
+              className="flex items-center gap-2 w-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronRight className={`h-4 w-4 transition-transform ${workLogsExpanded ? "rotate-90" : ""}`} />
+              Work Logs
+              {workLogs.length > 0 && (
+                <span className="text-xs text-muted-foreground/60">({workLogs.length})</span>
+              )}
+            </button>
+
+            {workLogsExpanded && (
+              <div className="mt-3 space-y-1">
+                {isLoadingWorkLogs ? (
+                  <div className="flex justify-center py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : workLogs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground px-2 py-1">No work logs for this task.</p>
+                ) : (
+                  workLogs.map((log) => {
+                    const duration = log.endTime
+                      ? (() => {
+                          const ms = new Date(log.endTime).getTime() - new Date(log.startTime).getTime();
+                          const h = Math.floor(ms / 3_600_000);
+                          const m = Math.floor((ms % 3_600_000) / 60_000);
+                          return h > 0 ? `${h}h ${m}m` : `${m}m`;
+                        })()
+                      : null;
+
+                    return (
+                      <div key={log.id} className="flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-accent/50 text-sm">
+                        <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
+                          <AvatarImage src={log.user.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[9px]">
+                            {log.user.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-xs">{log.user.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(log.startTime), "MMM d")}
+                            </span>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {format(new Date(log.startTime), "HH:mm")}
+                              {log.endTime && ` – ${format(new Date(log.endTime), "HH:mm")}`}
+                            </span>
+                            {duration && (
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                <Clock className="h-2.5 w-2.5" />
+                                {duration}
+                              </span>
+                            )}
+                          </div>
+                          {log.note && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{log.note}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
 

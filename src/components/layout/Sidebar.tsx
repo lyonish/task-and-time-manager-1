@@ -10,6 +10,7 @@ import {
   Plus,
   ChevronDown,
   Settings,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +47,11 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       label: "My Tasks",
       href: "/my-tasks",
       icon: CheckSquare,
+    },
+    {
+      label: "Work Log",
+      href: "/work-logs",
+      icon: ClipboardList,
     },
   ];
 
