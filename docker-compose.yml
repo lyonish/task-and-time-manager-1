@@ -18,5 +18,21 @@ services:
       timeout: 5s
       retries: 3
 
+  app:
+    build: .
+    container_name: taskmanager-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Inside the container the DB is reachable via the service name, not localhost
+      DATABASE_URL: mysql://taskuser:taskpassword@mysql:3306/taskmanager
+      NEXTAUTH_URL: http://localhost:3000
+      # Override via env var in production: NEXTAUTH_SECRET=<strong-secret> docker compose up
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-local-dev-secret-change-in-production}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 volumes:
   mysql_data:
