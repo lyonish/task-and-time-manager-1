@@ -6,7 +6,7 @@
  * - Adds steps to ~8 tasks across the two seeded projects
  */
 import { config } from "dotenv";
-config({ path: ".env.local" });
+config({ path: ".env.local", override: false });
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";

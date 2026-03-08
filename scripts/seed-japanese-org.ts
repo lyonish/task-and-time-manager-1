@@ -9,7 +9,7 @@
  *   - Steps on 8 tasks
  */
 import { config } from "dotenv";
-config({ path: ".env.local" });
+config({ path: ".env.local", override: false });
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
