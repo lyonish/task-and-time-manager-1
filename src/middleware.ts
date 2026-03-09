@@ -1,43 +1,26 @@
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 const publicRoutes = ["/login", "/register"];
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Allow static files and API routes
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.includes(".")
-  ) {
-    return NextResponse.next();
-  }
-
-  const secret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
-  console.log("[middleware]", pathname, "secret present:", !!secret);
-
-  const token = await getToken({ req: request, secret });
-  console.log("[middleware] token:", token ? `found (sub=${token.sub})` : "null");
-
-  const isLoggedIn = !!token;
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const isLoggedIn = !!req.auth;
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Redirect logged-in users away from public routes
+  console.log("[middleware]", pathname, "isLoggedIn:", isLoggedIn, "user:", req.auth?.user?.email ?? null);
+
   if (isPublicRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Redirect non-logged-in users to login
   if (!isPublicRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
 };
