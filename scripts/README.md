@@ -4,14 +4,17 @@
 
 | Script | Description |
 |--------|-------------|
-| `seed-tasks.ts` | Populates the first project with 60 hierarchical test tasks (Condor→Sparrow) |
-| `seed-sample-data.ts` | Adds 14 English-speaking members, 2 projects (50 tasks) to the existing workspace |
-| `seed-work-logs-and-steps.ts` | Replaces work logs with 14 days of data; adds steps to 8 tasks in the seeded projects |
-| `seed-japanese-org.ts` | Creates a fully independent Japanese tenant with 15 members, 2 projects, 50 tasks, 14-day logs, and steps |
+| `seed.ts` | **Primary seed.** Creates both workspaces from scratch on a fresh DB: 15 members each, 2 projects × 25 tasks, 14-day work logs, steps on 8 tasks. Fully idempotent (safe to re-run). |
+| `seed-tasks.ts` | Legacy: populates the first project with 60 hierarchical test tasks (Condor→Sparrow). |
 
-Run any script with:
+Run the primary seed with:
 ```bash
-npx tsx scripts/<script-name>.ts
+npx tsx scripts/seed.ts
+```
+
+Or via Railway (using public MySQL endpoint):
+```bash
+DATABASE_URL="mysql://..." npx tsx scripts/seed.ts
 ```
 
 ---
@@ -20,11 +23,9 @@ npx tsx scripts/<script-name>.ts
 
 All seeded accounts use the password: **`password123`**
 
-> All accounts including workspace owners use **`password123`**.
-
 ---
 
-### Org 1 — Nishimura1's Workspace
+### Org 1 — Acme Corp
 
 | Role | Name | Email |
 |------|------|-------|
@@ -36,10 +37,11 @@ All seeded accounts use the password: **`password123`**
 | Member | Emma Johnson | emma.johnson@example.com |
 
 <details>
-<summary>All 14 seeded members</summary>
+<summary>All 15 members</summary>
 
 | Name | Email |
 |------|-------|
+| Alex Rivera | alex.rivera@example.com |
 | Alice Chen | alice.chen@example.com |
 | Bob Martinez | bob.martinez@example.com |
 | Carol Kim | carol.kim@example.com |
