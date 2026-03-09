@@ -16,10 +16,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
-  });
+  const secret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
+  console.log("[middleware]", pathname, "secret present:", !!secret);
+
+  const token = await getToken({ req: request, secret });
+  console.log("[middleware] token:", token ? `found (sub=${token.sub})` : "null");
 
   const isLoggedIn = !!token;
   const isPublicRoute = publicRoutes.includes(pathname);
