@@ -69,8 +69,8 @@ export async function PATCH(
       );
     }
 
-    const workspace = await WorkspaceService.update(workspaceId, parsed.data);
-    return NextResponse.json(workspace);
+    const updated = await WorkspaceService.update(workspaceId, parsed.data);
+    return NextResponse.json(updated);
   } catch (error) {
     console.error("Update workspace error:", error);
     return NextResponse.json(
