@@ -148,10 +148,10 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       {/* Settings */}
       <div className="p-2 border-t border-sidebar-border">
         <Link
-          href="/settings"
+          href={workspaceId ? `/workspace/${workspaceId}/settings` : "/"}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-            pathname === "/settings"
+            pathname.includes("/settings")
               ? "bg-sidebar-accent text-sidebar-accent-foreground"
               : "text-sidebar-foreground/70 hover:bg-sidebar-accent"
           )}

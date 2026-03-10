@@ -108,12 +108,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Check if user can delete (Admin or Project_Manager)
+    // Check if user can delete (Admin only)
     const role = await WorkspaceService.getMemberRole(
       task.project!.workspaceId,
       session.user.id
     );
-    if (!role || role === "Team_Member") {
+    if (!role || role === "Member" || role === "Guest") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

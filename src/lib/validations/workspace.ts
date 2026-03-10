@@ -7,16 +7,17 @@ export const createWorkspaceSchema = z.object({
 
 export const updateWorkspaceSchema = z.object({
   name: z.string().min(1, "Name is required").max(255).optional(),
-  description: z.string().max(1000).optional(),
+  description: z.string().max(1000).nullish(),
+  iconUrl: z.string().url("Must be a valid URL").max(500).nullish(),
 });
 
 export const addMemberSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: z.enum(["Admin", "Project_Manager", "Team_Member"]).default("Team_Member"),
+  role: z.enum(["Admin", "Member", "Guest"]).default("Member"),
 });
 
 export const updateMemberRoleSchema = z.object({
-  role: z.enum(["Admin", "Project_Manager", "Team_Member"]),
+  role: z.enum(["Admin", "Member", "Guest"]),
 });
 
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;

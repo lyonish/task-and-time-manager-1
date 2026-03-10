@@ -69,12 +69,12 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Check if user can manage workflow (Admin or Project_Manager)
+    // Check if user can manage workflow (Admin only)
     const role = await WorkspaceService.getMemberRole(
       project.workspaceId,
       session.user.id
     );
-    if (!role || role === "Team_Member") {
+    if (!role || role === "Member" || role === "Guest") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -120,7 +120,7 @@ export async function PATCH(
       project.workspaceId,
       session.user.id
     );
-    if (!role || role === "Team_Member") {
+    if (!role || role === "Member" || role === "Guest") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

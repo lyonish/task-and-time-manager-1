@@ -54,6 +54,7 @@ export const workspaces = mysqlTable(
       .$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    iconUrl: varchar("icon_url", { length: 500 }),
     ownerId: varchar("owner_id", { length: 36 }).notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
@@ -79,9 +80,9 @@ export const workspaceMembers = mysqlTable(
       .$defaultFn(() => crypto.randomUUID()),
     workspaceId: varchar("workspace_id", { length: 36 }).notNull(),
     userId: varchar("user_id", { length: 36 }).notNull(),
-    role: mysqlEnum("role", ["Admin", "Project_Manager", "Team_Member"])
+    role: mysqlEnum("role", ["Admin", "Member", "Guest"])
       .notNull()
-      .default("Team_Member"),
+      .default("Member"),
     joinedAt: timestamp("joined_at").defaultNow(),
   },
   (table) => [

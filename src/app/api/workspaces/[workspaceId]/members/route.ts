@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { WorkspaceService } from "@/services/workspace.service";
-import { ProjectService } from "@/services/project.service";
-import { createProjectSchema } from "@/lib/validations/project";
+import { addMemberSchema } from "@/lib/validations/workspace";
 
 export async function GET(
-  request: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
@@ -16,20 +15,21 @@ export async function GET(
 
     const { workspaceId } = await params;
 
-    // Check if user is a member
     const isMember = await WorkspaceService.isMember(workspaceId, session.user.id);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const projects = await ProjectService.getByWorkspaceId(workspaceId);
-    return NextResponse.json(projects);
-  } catch (error) {
-    console.error("Get projects error:", error);
+    const workspace = await WorkspaceService.getById(workspaceId);
+    const members = await WorkspaceService.getMembers(workspaceId);
+
+    // Annotate each member with isOwner flag
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      members.map((m) => ({ ...m, isOwner: m.userId === workspace?.ownerId }))
     );
+  } catch (error) {
+    console.error("Get members error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -45,15 +45,19 @@ export async function POST(
 
     const { workspaceId } = await params;
 
-    // Check if user can create projects (Admin only)
+    const workspace = await WorkspaceService.getById(workspaceId);
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    const isOwner = workspace.ownerId === session.user.id;
     const role = await WorkspaceService.getMemberRole(workspaceId, session.user.id);
-    if (!role || role === "Member" || role === "Guest") {
+    if (!isOwner && role !== "Admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-    const parsed = createProjectSchema.safeParse(body);
-
+    const parsed = addMemberSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validation failed", details: parsed.error.flatten() },
@@ -61,17 +65,15 @@ export async function POST(
       );
     }
 
-    const project = await ProjectService.create(
+    const members = await WorkspaceService.addMember(
       workspaceId,
       parsed.data,
       session.user.id
     );
-    return NextResponse.json(project, { status: 201 });
+    return NextResponse.json(members, { status: 201 });
   } catch (error) {
-    console.error("Create project error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Internal server error";
+    const status = message === "User not found" || message === "User is already a member" ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

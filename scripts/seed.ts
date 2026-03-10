@@ -279,7 +279,7 @@ async function seedOrg(
   // ── workspace members ────────────────────────────────────────────────────
   for (let i = 0; i < allMemberIds.length; i++) {
     const userId = allMemberIds[i];
-    const role = i === 0 ? "Admin" : i <= 2 ? "Project_Manager" : "Team_Member";
+    const role = i <= 2 ? "Admin" : "Member";
     const exists = await db.query.workspaceMembers.findFirst({
       where: and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)),
     });

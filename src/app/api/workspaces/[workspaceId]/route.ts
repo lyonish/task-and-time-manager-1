@@ -48,9 +48,14 @@ export async function PATCH(
 
     const { workspaceId } = await params;
 
-    // Check if user is admin
+    // Owner or Admin can edit workspace settings
+    const workspace = await WorkspaceService.getById(workspaceId);
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+    const isOwner = workspace.ownerId === session.user.id;
     const role = await WorkspaceService.getMemberRole(workspaceId, session.user.id);
-    if (role !== "Admin") {
+    if (!isOwner && role !== "Admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -87,9 +92,9 @@ export async function DELETE(
 
     const { workspaceId } = await params;
 
-    // Check if user is admin
-    const role = await WorkspaceService.getMemberRole(workspaceId, session.user.id);
-    if (role !== "Admin") {
+    // Only owner can delete the workspace
+    const workspace = await WorkspaceService.getById(workspaceId);
+    if (!workspace || workspace.ownerId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -31,7 +31,7 @@ export type {
   NewActivityLog,
 } from "@/lib/db/schema";
 
-export type Role = "Admin" | "Project_Manager" | "Team_Member";
+export type Role = "Admin" | "Member" | "Guest";
 export type Priority = "None" | "Low" | "Medium" | "High" | "Urgent";
 
 export type ActionType =
@@ -91,6 +91,7 @@ export interface WorkspaceWithRelations {
   id: string;
   name: string;
   description: string | null;
+  iconUrl: string | null;
   ownerId: string;
   createdAt: Date | null;
   updatedAt: Date | null;

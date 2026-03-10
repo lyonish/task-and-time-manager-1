@@ -62,7 +62,7 @@ export async function PATCH(
       project.workspaceId,
       session.user.id
     );
-    if (!role || role === "Team_Member") {
+    if (!role || role === "Member" || role === "Guest") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -113,7 +113,7 @@ export async function DELETE(
       project.workspaceId,
       session.user.id
     );
-    if (!role || role === "Team_Member") {
+    if (!role || role === "Member" || role === "Guest") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
