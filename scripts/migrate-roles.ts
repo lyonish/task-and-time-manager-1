@@ -36,11 +36,15 @@ async function main() {
   );
   console.log(`Team_Member → Member: ${(r2 as mysql.ResultSetHeader).affectedRows} rows`);
 
-  // Step 3: Add iconUrl column if not exists
-  await conn.execute(
-    `ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS icon_url VARCHAR(500)`
-  );
-  console.log("icon_url column ensured.");
+  // Step 3: Add iconUrl column (safe: ignore duplicate column error)
+  try {
+    await conn.execute(`ALTER TABLE workspaces ADD COLUMN icon_url VARCHAR(500)`);
+    console.log("icon_url column added.");
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "ER_DUP_FIELDNAME") {
+      console.log("icon_url column already exists, skipping.");
+    } else throw e;
+  }
 
   // Step 4: Narrow the enum to final values
   await conn.execute(
