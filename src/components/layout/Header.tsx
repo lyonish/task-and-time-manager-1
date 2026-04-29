@@ -1,7 +1,8 @@
 "use client";
 
 import { signOut, useSession } from "next-auth/react";
-import { Bell, Search, LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, Search, LogOut, User, Settings } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 
 export function Header() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   const initials = session?.user?.name
     ?.split(" ")
@@ -73,6 +75,11 @@ export function Header() {
                 </p>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/settings/profile")} className="cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              Personal settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}
