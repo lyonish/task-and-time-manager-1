@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDetailPanelSize } from "@/hooks/useDetailPanelSize";
 import { useRouter } from "next/navigation";
 import {
   Sheet,
@@ -116,6 +117,7 @@ export function TaskDetailPanel({
   currentUserId,
 }: TaskDetailPanelProps) {
   const router = useRouter();
+  const { sizeClass } = useDetailPanelSize();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [statusId, setStatusId] = useState<string | null>(null);
@@ -572,7 +574,7 @@ export function TaskDetailPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto px-6">
+      <SheetContent className={`${sizeClass} overflow-y-auto px-6`}>
         <SheetHeader className="space-y-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="sr-only">Task Details</SheetTitle>
