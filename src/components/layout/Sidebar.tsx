@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Settings,
   ClipboardList,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,11 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       label: "Work Log",
       href: "/work-logs",
       icon: ClipboardList,
+    },
+    {
+      label: "Statistics",
+      href: workspaceId ? `/workspace/${workspaceId}/stats` : "/",
+      icon: BarChart2,
     },
   ];
 

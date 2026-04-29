@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Plus, Save, Star } from "lucide-react";
+import { BarChart2, MoreHorizontal, Plus, Save, Star } from "lucide-react";
 import type { ViewConfig, ProjectView, WorkflowStatus, TaskLayer } from "@/lib/db/schema";
+import { ProjectStatsPanel } from "@/components/stats/ProjectStatsPanel";
 
 interface Task {
   id: string;
@@ -62,6 +63,7 @@ const DEFAULT_CONFIG: ViewConfig = { groupBy: "none", viewMode: "list", isCompac
 export function ProjectContent({
   project, statuses, layers, tasks, members, currentUserId, initialViews,
 }: ProjectContentProps) {
+  const [activeTab, setActiveTab] = useState<"views" | "stats">("views");
   const [views, setViews] = useState<ProjectView[]>(initialViews);
   const defaultView = initialViews.find((v) => v.isDefault) ?? initialViews[0];
   const [activeViewId, setActiveViewId] = useState<string>(defaultView?.id ?? "");
@@ -282,11 +284,30 @@ export function ProjectContent({
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
+
+          {/* Stats tab separator + button */}
+          <div className="ml-3 pl-3 border-l border-border flex items-center shrink-0">
+            <button
+              onClick={() => setActiveTab(activeTab === "stats" ? "views" : "stats")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm border-b-2 transition-colors whitespace-nowrap",
+                activeTab === "stats"
+                  ? "border-primary text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              <BarChart2 className="h-3.5 w-3.5" />
+              Stats
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Task List */}
+      {/* Content */}
       <div className="flex-1 overflow-y-auto">
+        {activeTab === "stats" ? (
+          <ProjectStatsPanel projectId={project.id} />
+        ) : (
         <TaskList
           key={activeViewId}
           projectId={project.id}
@@ -300,6 +321,7 @@ export function ProjectContent({
           initialIsCompact={currentConfig.isCompact}
           onConfigChange={handleConfigChange}
         />
+        )}
       </div>
 
       {/* Rename dialog */}
