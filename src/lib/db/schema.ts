@@ -139,6 +139,41 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   taskLayers: many(taskLayers),
   tasks: many(tasks),
   activityLogs: many(activityLogs),
+  views: many(projectViews),
+}));
+
+// =============================================
+// PROJECT VIEWS
+// =============================================
+export const projectViews = mysqlTable(
+  "project_views",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: varchar("project_id", { length: 36 }).notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    isDefault: boolean("is_default").notNull().default(false),
+    position: int("position").notNull().default(0),
+    config: json("config")
+      .$type<{
+        groupBy: "none" | "status" | "priority" | "assignee" | "layer";
+        viewMode: "list" | "tree";
+        isCompact: boolean;
+      }>()
+      .notNull(),
+    createdBy: varchar("created_by", { length: 36 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [index("idx_pv_project").on(table.projectId)]
+);
+
+export const projectViewsRelations = relations(projectViews, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectViews.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const workflowStatuses = mysqlTable(
@@ -480,8 +515,13 @@ export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
 export type NewWorkspaceMember = typeof workspaceMembers.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
+export type ProjectView = typeof projectViews.$inferSelect;
+export type NewProjectView = typeof projectViews.$inferInsert;
+export type ViewConfig = NonNullable<ProjectView["config"]>;
 export type WorkflowStatus = typeof workflowStatuses.$inferSelect;
 export type NewWorkflowStatus = typeof workflowStatuses.$inferInsert;
+export type TaskLayer = typeof taskLayers.$inferSelect;
+export type NewTaskLayer = typeof taskLayers.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type Step = typeof steps.$inferSelect;

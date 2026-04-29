@@ -2,9 +2,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { WorkspaceService } from "@/services/workspace.service";
 import { ProjectService } from "@/services/project.service";
-import { TaskList } from "@/components/tasks/TaskList";
-import { WorkflowSettings } from "@/components/workflow/WorkflowSettings";
-import { LayerSettings } from "@/components/workflow/LayerSettings";
+import { ProjectContent } from "@/components/projects/ProjectContent";
+import { db } from "@/lib/db";
+import { projectViews } from "@/lib/db/schema";
+import { eq, asc } from "drizzle-orm";
 
 export default async function ProjectPage({
   params,
@@ -18,7 +19,6 @@ export default async function ProjectPage({
 
   const { workspaceId, projectId } = await params;
 
-  // Check membership
   const isMember = await WorkspaceService.isMember(workspaceId, session.user.id);
   if (!isMember) {
     redirect("/");
@@ -29,55 +29,52 @@ export default async function ProjectPage({
     redirect(`/workspace/${workspaceId}`);
   }
 
-  // Get workspace members for assignment
   const members = await WorkspaceService.getMembers(workspaceId);
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Project Header */}
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: project.color || "#6366f1" }}
-            />
-            <h1 className="text-xl font-bold">{project.name}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <LayerSettings
-              projectId={projectId}
-              layers={project.taskLayers || []}
-            />
-            <WorkflowSettings
-              projectId={projectId}
-              statuses={project.workflowStatuses || []}
-            />
-          </div>
-        </div>
-        {project.description && (
-          <p className="text-sm text-muted-foreground mt-1">
-            {project.description}
-          </p>
-        )}
-      </div>
+  let views = await db
+    .select()
+    .from(projectViews)
+    .where(eq(projectViews.projectId, projectId))
+    .orderBy(asc(projectViews.position));
 
-      {/* Task List */}
-      <div className="flex-1 overflow-y-auto">
-        <TaskList
-          projectId={projectId}
-          statuses={project.workflowStatuses || []}
-          layers={project.taskLayers || []}
-          tasks={project.tasks || []}
-          members={members.map((m) => ({
-            id: m.user!.id,
-            name: m.user!.name,
-            email: m.user!.email,
-            avatarUrl: m.user!.avatarUrl,
-          }))}
-          currentUserId={session.user.id}
-        />
-      </div>
-    </div>
+  if (views.length === 0) {
+    const [created] = await db
+      .insert(projectViews)
+      .values({
+        projectId,
+        name: "All Tasks",
+        isDefault: true,
+        position: 0,
+        config: { groupBy: "none", viewMode: "list", isCompact: false },
+        createdBy: session.user.id,
+      })
+      .$returningId();
+    views = await db
+      .select()
+      .from(projectViews)
+      .where(eq(projectViews.id, created.id))
+      .limit(1);
+  }
+
+  return (
+    <ProjectContent
+      project={{
+        id: project.id,
+        name: project.name,
+        description: project.description ?? null,
+        color: project.color ?? null,
+      }}
+      statuses={project.workflowStatuses || []}
+      layers={project.taskLayers || []}
+      tasks={project.tasks || []}
+      members={members.map((m) => ({
+        id: m.user!.id,
+        name: m.user!.name,
+        email: m.user!.email,
+        avatarUrl: m.user!.avatarUrl,
+      }))}
+      currentUserId={session.user.id}
+      initialViews={views}
+    />
   );
 }

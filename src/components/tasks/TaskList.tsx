@@ -69,6 +69,10 @@ interface TaskListProps {
   tasks: Task[];
   members: Member[];
   currentUserId: string;
+  initialGroupBy?: GroupBy;
+  initialViewMode?: ViewMode;
+  initialIsCompact?: boolean;
+  onConfigChange?: (config: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean }) => void;
 }
 
 type GroupBy = "none" | "status" | "priority" | "assignee" | "layer";
@@ -90,13 +94,21 @@ interface Group {
   tasks: Task[];
 }
 
-export function TaskList({ projectId, statuses, layers, tasks, members, currentUserId }: TaskListProps) {
+export function TaskList({
+  projectId, statuses, layers, tasks, members, currentUserId,
+  initialGroupBy = "none", initialViewMode = "list", initialIsCompact = false,
+  onConfigChange,
+}: TaskListProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
+  const [groupBy, setGroupBy] = useState<GroupBy>(initialGroupBy);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [isCompact, setIsCompact] = useState(false);
+  const [isCompact, setIsCompact] = useState(initialIsCompact);
+
+  const notifyChange = (next: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean }) => {
+    onConfigChange?.(next);
+  };
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -188,8 +200,11 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
             <Select
               value={groupBy}
               onValueChange={(v) => {
-                setGroupBy(v as GroupBy);
+                const nextGroupBy = v as GroupBy;
+                const nextViewMode = v !== "layer" ? "list" : viewMode;
+                setGroupBy(nextGroupBy);
                 if (v !== "layer") setViewMode("list");
+                notifyChange({ groupBy: nextGroupBy, viewMode: nextViewMode, isCompact });
               }}
             >
               <SelectTrigger className="w-32 h-8">
@@ -212,7 +227,11 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
               variant="ghost"
               size="sm"
               className="h-7 px-2"
-              onClick={() => setIsCompact(!isCompact)}
+              onClick={() => {
+                const next = !isCompact;
+                setIsCompact(next);
+                notifyChange({ groupBy, viewMode, isCompact: next });
+              }}
               title={isCompact ? "Normal view" : "Compact view"}
             >
               {isCompact ? (
@@ -229,7 +248,7 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   className="h-7 px-2"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => { setViewMode("list"); notifyChange({ groupBy, viewMode: "list", isCompact }); }}
                 >
                   <List className="h-4 w-4 mr-1" />
                   List
@@ -238,7 +257,7 @@ export function TaskList({ projectId, statuses, layers, tasks, members, currentU
                   variant={viewMode === "tree" ? "secondary" : "ghost"}
                   size="sm"
                   className="h-7 px-2"
-                  onClick={() => setViewMode("tree")}
+                  onClick={() => { setViewMode("tree"); notifyChange({ groupBy, viewMode: "tree", isCompact }); }}
                 >
                   <GitBranch className="h-4 w-4 mr-1" />
                   Tree
