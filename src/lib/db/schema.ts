@@ -119,6 +119,7 @@ export const projects = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     color: varchar("color", { length: 7 }).default("#6366f1"),
+    iconUrl: varchar("icon_url", { length: 500 }),
     createdBy: varchar("created_by", { length: 36 }).notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),

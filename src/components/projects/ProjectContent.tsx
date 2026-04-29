@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { TaskList } from "@/components/tasks/TaskList";
-import { WorkflowSettings } from "@/components/workflow/WorkflowSettings";
-import { LayerSettings } from "@/components/workflow/LayerSettings";
+import { ProjectSettings } from "@/components/projects/ProjectSettings";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -49,7 +48,7 @@ interface Member {
 }
 
 interface ProjectContentProps {
-  project: { id: string; name: string; description: string | null; color: string | null };
+  project: { id: string; name: string; description: string | null; color: string | null; iconUrl: string | null };
   statuses: WorkflowStatus[];
   layers: TaskLayer[];
   tasks: Task[];
@@ -193,27 +192,29 @@ export function ProjectContent({
       <div className="border-b border-border px-6 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: project.color || "#6366f1" }}
-            />
+            {project.iconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={project.iconUrl} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+            ) : (
+              <span className="w-3 h-3 rounded shrink-0" style={{ backgroundColor: project.color || "#6366f1" }} />
+            )}
             <h1 className="text-xl font-bold">{project.name}</h1>
           </div>
           <div className="flex items-center gap-2">
             {isDirty && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 gap-1.5 text-xs"
-                onClick={saveView}
-                disabled={isSaving}
-              >
+              <Button variant="secondary" size="sm" className="h-7 gap-1.5 text-xs" onClick={saveView} disabled={isSaving}>
                 <Save className="h-3.5 w-3.5" />
                 {isSaving ? "Saving…" : "Save view"}
               </Button>
             )}
-            <LayerSettings projectId={project.id} layers={layers} />
-            <WorkflowSettings projectId={project.id} statuses={statuses} />
+            <ProjectSettings
+              project={project}
+              statuses={statuses}
+              layers={layers}
+              onProjectUpdate={(updated) => {
+                if (updated.name) project.name = updated.name;
+              }}
+            />
           </div>
         </div>
 

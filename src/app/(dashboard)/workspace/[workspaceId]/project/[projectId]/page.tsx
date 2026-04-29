@@ -63,6 +63,7 @@ export default async function ProjectPage({
         name: project.name,
         description: project.description ?? null,
         color: project.color ?? null,
+        iconUrl: project.iconUrl ?? null,
       }}
       statuses={project.workflowStatuses || []}
       layers={project.taskLayers || []}

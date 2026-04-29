@@ -12,11 +12,12 @@ export const createProjectSchema = z.object({
 
 export const updateProjectSchema = z.object({
   name: z.string().min(1, "Name is required").max(255).optional(),
-  description: z.string().max(2000).optional(),
+  description: z.string().max(2000).nullable().optional(),
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format")
     .optional(),
+  iconUrl: z.string().url("Invalid URL").max(500).nullable().optional(),
 });
 
 export const createWorkflowStatusSchema = z.object({
