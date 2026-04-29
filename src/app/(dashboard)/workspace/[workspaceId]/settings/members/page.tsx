@@ -169,7 +169,7 @@ export default function MembersSettingsPage() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{m.user.name}</p>
+                <p className="text-sm font-medium truncate text-card-foreground">{m.user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{m.user.email}</p>
               </div>
 

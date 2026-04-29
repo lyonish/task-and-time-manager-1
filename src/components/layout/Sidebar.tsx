@@ -61,7 +61,7 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       <div className="p-4 border-b border-sidebar-border">
         <Button
           variant="ghost"
-          className="w-full justify-start font-semibold text-lg"
+          className="w-full justify-start font-semibold text-lg text-sidebar-foreground"
         >
           {workspaceName || "My Workspace"}
         </Button>
