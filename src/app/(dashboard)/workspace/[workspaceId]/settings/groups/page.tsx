@@ -16,6 +16,7 @@ import {
 import { Plus, Pencil, Trash2, Users, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
 
 interface GroupMember {
   id: string;
@@ -37,6 +38,7 @@ interface WorkspaceMember {
 
 export default function GroupsSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { canEdit } = useWorkspaceRole();
   const [groups, setGroups] = useState<Group[]>([]);
   const [wsMembers, setWsMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,9 +174,11 @@ export default function GroupsSettingsPage() {
           <h1 className="text-2xl font-bold">Groups</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage user groups for project access control.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />New Group
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />New Group
+          </Button>
+        )}
       </div>
 
       <Separator />
@@ -200,7 +204,7 @@ export default function GroupsSettingsPage() {
                 )}
                 <span className="text-xs text-muted-foreground">{group.members.length} member{group.members.length !== 1 ? "s" : ""}</span>
 
-                {!group.isDefault && (
+                {canEdit && !group.isDefault && (
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost" size="icon" className="h-7 w-7"
@@ -232,7 +236,7 @@ export default function GroupsSettingsPage() {
                         <p className="text-sm font-medium truncate">{m.user.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{m.user.email}</p>
                       </div>
-                      {!group.isDefault && (
+                      {canEdit && !group.isDefault && (
                         <Button
                           variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
                           onClick={() => removeMember(group, m.userId)}
@@ -244,7 +248,7 @@ export default function GroupsSettingsPage() {
                   ))}
 
                   {/* Add member row */}
-                  {!group.isDefault && addable.length > 0 && (
+                  {canEdit && !group.isDefault && addable.length > 0 && (
                     <div className="px-4 py-2.5">
                       {addingToGroup === group.id ? (
                         <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">

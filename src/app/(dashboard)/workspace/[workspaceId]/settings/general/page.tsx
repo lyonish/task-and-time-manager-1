@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
 
 interface WorkspaceData {
   id: string;
@@ -17,6 +18,7 @@ interface WorkspaceData {
 
 export default function GeneralSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { canEdit } = useWorkspaceRole();
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -90,6 +92,7 @@ export default function GeneralSettingsPage() {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={255}
+            disabled={!canEdit}
           />
         </div>
 
@@ -102,6 +105,7 @@ export default function GeneralSettingsPage() {
             rows={3}
             maxLength={1000}
             placeholder="What does your organization do?"
+            disabled={!canEdit}
           />
         </div>
 
@@ -123,6 +127,7 @@ export default function GeneralSettingsPage() {
               onChange={(e) => setIconUrl(e.target.value)}
               placeholder="https://example.com/logo.png"
               type="url"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -133,10 +138,12 @@ export default function GeneralSettingsPage() {
           </p>
         )}
 
-        <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save changes
-        </Button>
+        {canEdit && (
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save changes
+          </Button>
+        )}
       </form>
     </div>
   );

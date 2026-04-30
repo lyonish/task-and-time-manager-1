@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
+import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
 
 type Role = "Admin" | "Member" | "Guest";
 
@@ -49,6 +50,7 @@ function RoleBadge({ role, isOwner }: { role: Role; isOwner: boolean }) {
 
 export default function MembersSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { canEdit } = useWorkspaceRole();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -112,38 +114,40 @@ export default function MembersSettingsPage() {
         </p>
       </div>
 
-      {/* Invite form */}
-      <div className="border border-border rounded-lg p-5 space-y-4">
-        <h2 className="font-semibold text-sm">Invite a member</h2>
-        <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 space-y-1">
-            <Label htmlFor="invite-email" className="sr-only">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              placeholder="name@example.com"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              required
-            />
-          </div>
-          <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Admin">Admin</SelectItem>
-              <SelectItem value="Member">Member</SelectItem>
-              <SelectItem value="Guest">Guest</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" disabled={inviting}>
-            {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-            <span className="ml-2">Add</span>
-          </Button>
-        </form>
-        {inviteError && <p className="text-sm text-red-500">{inviteError}</p>}
-      </div>
+      {/* Invite form — admin only */}
+      {canEdit && (
+        <div className="border border-border rounded-lg p-5 space-y-4">
+          <h2 className="font-semibold text-sm">Invite a member</h2>
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="invite-email" className="sr-only">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="name@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Admin">Admin</SelectItem>
+                <SelectItem value="Member">Member</SelectItem>
+                <SelectItem value="Guest">Guest</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" disabled={inviting}>
+              {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              <span className="ml-2">Add</span>
+            </Button>
+          </form>
+          {inviteError && <p className="text-sm text-red-500">{inviteError}</p>}
+        </div>
+      )}
 
       {/* Members list */}
       <div className="space-y-2">
@@ -174,8 +178,8 @@ export default function MembersSettingsPage() {
               </div>
 
               {/* Role */}
-              {m.isOwner ? (
-                <RoleBadge role={m.role} isOwner={true} />
+              {(m.isOwner || !canEdit) ? (
+                <RoleBadge role={m.role} isOwner={m.isOwner} />
               ) : (
                 <Select
                   value={m.role}
@@ -192,8 +196,8 @@ export default function MembersSettingsPage() {
                 </Select>
               )}
 
-              {/* Remove */}
-              {!m.isOwner && (
+              {/* Remove — admin only */}
+              {canEdit && !m.isOwner && (
                 <Button
                   variant="ghost"
                   size="icon"
