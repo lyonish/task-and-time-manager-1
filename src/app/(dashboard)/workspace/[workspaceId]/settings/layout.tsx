@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Settings, Users, CreditCard } from "lucide-react";
+import { Settings, Users, CreditCard, UsersRound } from "lucide-react";
 
 const navItems = [
-  { label: "General", icon: Settings, segment: "general" },
-  { label: "Members", icon: Users, segment: "members" },
-  { label: "Billing", icon: CreditCard, segment: "billing" },
+  { label: "General",  icon: Settings,    segment: "general" },
+  { label: "Members",  icon: Users,        segment: "members" },
+  { label: "Groups",   icon: UsersRound,   segment: "groups" },
+  { label: "Billing",  icon: CreditCard,   segment: "billing" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

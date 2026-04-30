@@ -49,7 +49,7 @@ interface Member {
 }
 
 interface ProjectContentProps {
-  project: { id: string; name: string; description: string | null; color: string | null; iconUrl: string | null };
+  project: { id: string; workspaceId: string; name: string; description: string | null; color: string | null; iconUrl: string | null };
   statuses: WorkflowStatus[];
   layers: TaskLayer[];
   tasks: Task[];
@@ -213,6 +213,8 @@ export function ProjectContent({
               project={project}
               statuses={statuses}
               layers={layers}
+              workspaceId={project.workspaceId}
+              currentUserId={currentUserId}
               onProjectUpdate={(updated) => {
                 if (updated.name) project.name = updated.name;
               }}

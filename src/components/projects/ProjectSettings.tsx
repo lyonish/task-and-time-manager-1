@@ -79,14 +79,30 @@ interface Layer {
   position: number;
 }
 
+interface AccessEntry {
+  id: string;
+  principalType: "user" | "group";
+  principalId: string;
+  role: "Owner" | "Editor" | "Viewer";
+  name: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+  isDefault?: boolean | null;
+}
+
+interface GroupOption { id: string; name: string; isDefault: boolean | null }
+interface MemberOption { user: { id: string; name: string; email: string; avatarUrl: string | null } }
+
 interface ProjectSettingsProps {
   project: ProjectInfo;
   statuses: Status[];
   layers: Layer[];
+  workspaceId: string;
+  currentUserId: string;
   onProjectUpdate?: (updated: Partial<ProjectInfo>) => void;
 }
 
-type Tab = "general" | "workflow" | "layers";
+type Tab = "general" | "workflow" | "layers" | "access";
 
 // ─── Color palettes ────────────────────────────────────────────────────────────
 
@@ -173,7 +189,7 @@ function SortableLayerRow({
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function ProjectSettings({ project, statuses: initialStatuses, layers: initialLayers, onProjectUpdate }: ProjectSettingsProps) {
+export function ProjectSettings({ project, statuses: initialStatuses, layers: initialLayers, workspaceId, currentUserId, onProjectUpdate }: ProjectSettingsProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
@@ -205,6 +221,15 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
   const [layerNewName, setLayerNewName] = useState("");
   const [layerNewColor, setLayerNewColor] = useState("#8b5cf6");
 
+  // Access tab state
+  const [accessEntries, setAccessEntries] = useState<AccessEntry[]>([]);
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [groups, setGroups] = useState<GroupOption[]>([]);
+  const [wsMembers, setWsMembers] = useState<MemberOption[]>([]);
+  const [addingPrincipal, setAddingPrincipal] = useState(false);
+  const [addSearch, setAddSearch] = useState("");
+  const [addRole, setAddRole] = useState<"Owner" | "Editor" | "Viewer">("Editor");
+
   // Sync props → local state when dialog reopens
   useEffect(() => {
     if (open) {
@@ -216,6 +241,59 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
       setLayers(initialLayers);
     }
   }, [open, project, initialStatuses, initialLayers]);
+
+  // Load access data when Access tab is opened
+  useEffect(() => {
+    if (tab !== "access" || !open) return;
+    const load = async () => {
+      setAccessLoading(true);
+      try {
+        const [entriesRes, groupsRes, membersRes] = await Promise.all([
+          fetch(`/api/projects/${project.id}/members`),
+          fetch(`/api/workspaces/${workspaceId}/groups`),
+          fetch(`/api/workspaces/${workspaceId}/members`),
+        ]);
+        if (entriesRes.ok) setAccessEntries(await entriesRes.json());
+        if (groupsRes.ok) setGroups(await groupsRes.json());
+        if (membersRes.ok) setWsMembers(await membersRes.json());
+      } finally {
+        setAccessLoading(false);
+      }
+    };
+    load();
+  }, [tab, open, project.id, workspaceId]);
+
+  const addPrincipal = async (principalType: "user" | "group", principalId: string) => {
+    const res = await fetch(`/api/projects/${project.id}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ principalType, principalId, role: addRole }),
+    });
+    if (res.ok) {
+      const updated = await fetch(`/api/projects/${project.id}/members`);
+      if (updated.ok) setAccessEntries(await updated.json());
+      setAddSearch("");
+      setAddingPrincipal(false);
+    }
+  };
+
+  const updateEntryRole = async (entryId: string, role: "Owner" | "Editor" | "Viewer") => {
+    const res = await fetch(`/api/projects/${project.id}/members/${entryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    if (res.ok) setAccessEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, role } : e));
+  };
+
+  const removeEntry = async (entryId: string) => {
+    const res = await fetch(`/api/projects/${project.id}/members/${entryId}`, { method: "DELETE" });
+    if (res.ok) setAccessEntries((prev) => prev.filter((e) => e.id !== entryId));
+    else {
+      const err = await res.json();
+      toast.error(err.error || "Failed to remove");
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -417,9 +495,10 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
   // ── Render ────────────────────────────────────────────────────────────────────
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "general", label: "General" },
+    { key: "general",  label: "General" },
     { key: "workflow", label: "Workflow" },
-    { key: "layers", label: "Layers" },
+    { key: "layers",   label: "Layers" },
+    { key: "access",   label: "Access" },
   ];
 
   return (
@@ -577,6 +656,114 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
                 <Button variant="outline" className="w-full" onClick={() => setStatusIsAdding(true)}>
                   <Plus className="h-4 w-4 mr-2" />Add Status
                 </Button>
+              )}
+            </>
+          )}
+
+          {/* ── Access ── */}
+          {tab === "access" && (
+            <>
+              {accessLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">Control who can access this project. Only workspace owner can bypass these settings.</p>
+
+                  {/* Current entries */}
+                  <div className="space-y-1">
+                    {accessEntries.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-3 p-2 rounded-md border border-border bg-background">
+                        <span className={cn(
+                          "inline-flex items-center justify-center h-7 w-7 rounded-full shrink-0 text-xs font-medium",
+                          entry.principalType === "group" ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
+                        )}>
+                          {entry.principalType === "group" ? "G" : entry.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{entry.name}{entry.isDefault ? " (Everyone)" : ""}</p>
+                          {entry.email && <p className="text-xs text-muted-foreground truncate">{entry.email}</p>}
+                        </div>
+                        <Select
+                          value={entry.role}
+                          onValueChange={(v) => updateEntryRole(entry.id, v as "Owner" | "Editor" | "Viewer")}
+                        >
+                          <SelectTrigger className="h-7 w-24 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Owner">Owner</SelectItem>
+                            <SelectItem value="Editor">Editor</SelectItem>
+                            <SelectItem value="Viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <button
+                          onClick={() => removeEntry(entry.id)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title="Remove"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {accessEntries.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-2">No access entries yet. Only the workspace owner can access this project.</p>
+                    )}
+                  </div>
+
+                  {/* Add principal */}
+                  {addingPrincipal ? (
+                    <div className="space-y-2 p-3 border border-border rounded-md bg-background">
+                      <Input
+                        placeholder="Search user or group…"
+                        value={addSearch}
+                        onChange={(e) => setAddSearch(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground shrink-0">Role:</span>
+                        <Select value={addRole} onValueChange={(v) => setAddRole(v as "Owner" | "Editor" | "Viewer")}>
+                          <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Owner">Owner</SelectItem>
+                            <SelectItem value="Editor">Editor</SelectItem>
+                            <SelectItem value="Viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Results */}
+                      <div className="max-h-40 overflow-y-auto space-y-0.5">
+                        {groups
+                          .filter((g) => g.name.toLowerCase().includes(addSearch.toLowerCase()) && !accessEntries.find((e) => e.principalType === "group" && e.principalId === g.id))
+                          .map((g) => (
+                            <button key={g.id} onClick={() => addPrincipal("group", g.id)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent text-sm text-left">
+                              <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs shrink-0">G</span>
+                              <span className="truncate">{g.name}{g.isDefault ? " (Everyone)" : ""}</span>
+                            </button>
+                          ))}
+                        {wsMembers
+                          .filter((m) => (m.user.name + m.user.email).toLowerCase().includes(addSearch.toLowerCase()) && !accessEntries.find((e) => e.principalType === "user" && e.principalId === m.user.id))
+                          .map((m) => (
+                            <button key={m.user.id} onClick={() => addPrincipal("user", m.user.id)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent text-sm text-left">
+                              <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs shrink-0">
+                                {m.user.name.slice(0, 2).toUpperCase()}
+                              </span>
+                              <span className="truncate">{m.user.name}</span>
+                              <span className="text-xs text-muted-foreground truncate">{m.user.email}</span>
+                            </button>
+                          ))}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => { setAddingPrincipal(false); setAddSearch(""); }}>Cancel</Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="w-full" onClick={() => setAddingPrincipal(true)}>
+                      <Plus className="h-4 w-4 mr-2" />Add user or group
+                    </Button>
+                  )}
+                </>
               )}
             </>
           )}

@@ -4,6 +4,8 @@ import {
   workspaceMembers,
   users,
   activityLogs,
+  userGroups,
+  userGroupMembers,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import type {
@@ -31,7 +33,26 @@ export class WorkspaceService {
       role: "Admin",
     });
 
+    // Create default "Everyone" group and add creator
+    const groupId = crypto.randomUUID();
+    await db.insert(userGroups).values({
+      id: groupId,
+      workspaceId,
+      name: "Everyone",
+      isDefault: true,
+    });
+    await db.insert(userGroupMembers).values({ groupId, userId });
+
     return this.getById(workspaceId);
+  }
+
+  static async getDefaultGroup(workspaceId: string) {
+    return db.query.userGroups.findFirst({
+      where: and(
+        eq(userGroups.workspaceId, workspaceId),
+        eq(userGroups.isDefault, true)
+      ),
+    });
   }
 
   static async getById(id: string) {
@@ -118,6 +139,12 @@ export class WorkspaceService {
       role: data.role,
     });
 
+    // Add to default "Everyone" group
+    const defaultGroup = await this.getDefaultGroup(workspaceId);
+    if (defaultGroup) {
+      await db.insert(userGroupMembers).values({ groupId: defaultGroup.id, userId: user.id }).onDuplicateKeyUpdate({ set: { groupId: defaultGroup.id } });
+    }
+
     // Log activity
     await db.insert(activityLogs).values({
       workspaceId,
@@ -169,6 +196,17 @@ export class WorkspaceService {
           eq(workspaceMembers.userId, userId)
         )
       );
+
+    // Remove from all workspace groups
+    const wsGroups = await db.query.userGroups.findMany({
+      where: eq(userGroups.workspaceId, workspaceId),
+      columns: { id: true },
+    });
+    for (const g of wsGroups) {
+      await db.delete(userGroupMembers).where(
+        and(eq(userGroupMembers.groupId, g.id), eq(userGroupMembers.userId, userId))
+      );
+    }
 
     // Log activity
     await db.insert(activityLogs).values({

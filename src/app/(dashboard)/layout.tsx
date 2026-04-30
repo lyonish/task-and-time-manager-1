@@ -2,9 +2,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { workspaces, workspaceMembers, projects } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { getAccessibleProjectIds } from "@/lib/projectAccess";
 
 async function getWorkspaceData(userId: string) {
   // Get user's workspaces
@@ -21,11 +22,14 @@ async function getWorkspaceData(userId: string) {
 
   const workspace = membershipData.workspace;
 
-  // Get projects for this workspace
-  const workspaceProjects = await db.query.projects.findMany({
-    where: eq(projects.workspaceId, workspace.id),
-    orderBy: (projects, { asc }) => [asc(projects.name)],
-  });
+  // Get only accessible projects for this user
+  const accessibleIds = await getAccessibleProjectIds(workspace.id, userId);
+  const workspaceProjects = accessibleIds.length > 0
+    ? await db.query.projects.findMany({
+        where: inArray(projects.id, accessibleIds),
+        orderBy: (projects, { asc }) => [asc(projects.name)],
+      })
+    : [];
 
   return {
     workspace,

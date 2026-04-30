@@ -41,6 +41,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   mentions: many(mentions),
   activityLogs: many(activityLogs),
   workLogs: many(workLogs),
+  userGroupMemberships: many(userGroupMembers),
 }));
 
 // =============================================
@@ -70,6 +71,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   members: many(workspaceMembers),
   projects: many(projects),
   activityLogs: many(activityLogs),
+  userGroups: many(userGroups),
 }));
 
 export const workspaceMembers = mysqlTable(
@@ -107,6 +109,58 @@ export const workspaceMembersRelations = relations(
 );
 
 // =============================================
+// USER GROUPS
+// =============================================
+export const userGroups = mysqlTable(
+  "user_groups",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: varchar("workspace_id", { length: 36 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    isDefault: boolean("is_default").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("idx_user_groups_workspace").on(table.workspaceId)]
+);
+
+export const userGroupsRelations = relations(userGroups, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [userGroups.workspaceId],
+    references: [workspaces.id],
+  }),
+  members: many(userGroupMembers),
+}));
+
+export const userGroupMembers = mysqlTable(
+  "user_group_members",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    groupId: varchar("group_id", { length: 36 }).notNull(),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    addedAt: timestamp("added_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("unique_group_member").on(table.groupId, table.userId),
+    index("idx_ugm_user").on(table.userId),
+  ]
+);
+
+export const userGroupMembersRelations = relations(userGroupMembers, ({ one }) => ({
+  group: one(userGroups, {
+    fields: [userGroupMembers.groupId],
+    references: [userGroups.id],
+  }),
+  user: one(users, {
+    fields: [userGroupMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+// =============================================
 // PROJECTS & WORKFLOWS
 // =============================================
 export const projects = mysqlTable(
@@ -141,6 +195,36 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   tasks: many(tasks),
   activityLogs: many(activityLogs),
   views: many(projectViews),
+  projectMembers: many(projectMembers),
+}));
+
+// =============================================
+// PROJECT ACCESS
+// =============================================
+export const projectMembers = mysqlTable(
+  "project_members",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: varchar("project_id", { length: 36 }).notNull(),
+    principalType: mysqlEnum("principal_type", ["user", "group"]).notNull(),
+    principalId: varchar("principal_id", { length: 36 }).notNull(),
+    role: mysqlEnum("role", ["Owner", "Editor", "Viewer"]).notNull(),
+    addedAt: timestamp("added_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("unique_project_principal").on(table.projectId, table.principalType, table.principalId),
+    index("idx_pm_project").on(table.projectId),
+    index("idx_pm_principal").on(table.principalType, table.principalId),
+  ]
+);
+
+export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMembers.projectId],
+    references: [projects.id],
+  }),
 }));
 
 // =============================================
@@ -535,3 +619,10 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type WorkLog = typeof workLogs.$inferSelect;
 export type NewWorkLog = typeof workLogs.$inferInsert;
+export type UserGroup = typeof userGroups.$inferSelect;
+export type NewUserGroup = typeof userGroups.$inferInsert;
+export type UserGroupMember = typeof userGroupMembers.$inferSelect;
+export type NewUserGroupMember = typeof userGroupMembers.$inferInsert;
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type NewProjectMember = typeof projectMembers.$inferInsert;
+export type ProjectRole = "Owner" | "Editor" | "Viewer";

@@ -5,6 +5,7 @@ import {
   taskLayers,
   activityLogs,
   tasks,
+  projectMembers,
 } from "@/lib/db/schema";
 import { eq, asc, and } from "drizzle-orm";
 import type {
@@ -50,20 +51,22 @@ export class ProjectService {
       });
     }
 
-    // Log activity
-    const workspace = await db.query.projects.findFirst({
-      where: eq(projects.id, projectId),
+    // Grant creator Owner access
+    await db.insert(projectMembers).values({
+      projectId,
+      principalType: "user",
+      principalId: userId,
+      role: "Owner",
     });
 
-    if (workspace) {
-      await db.insert(activityLogs).values({
-        workspaceId,
-        projectId,
-        userId,
-        action: "project_created",
-        metadata: { projectName: data.name },
-      });
-    }
+    // Log activity
+    await db.insert(activityLogs).values({
+      workspaceId,
+      projectId,
+      userId,
+      action: "project_created",
+      metadata: { projectName: data.name },
+    });
 
     return this.getById(projectId);
   }

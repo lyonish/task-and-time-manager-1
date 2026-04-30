@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { WorkspaceService } from "@/services/workspace.service";
 import { ProjectService } from "@/services/project.service";
 import { ProjectContent } from "@/components/projects/ProjectContent";
+import { canAccessProject } from "@/lib/projectAccess";
 import { db } from "@/lib/db";
 import { projectViews } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
@@ -20,14 +21,13 @@ export default async function ProjectPage({
   const { workspaceId, projectId } = await params;
 
   const isMember = await WorkspaceService.isMember(workspaceId, session.user.id);
-  if (!isMember) {
-    redirect("/");
-  }
+  if (!isMember) redirect("/");
 
   const project = await ProjectService.getProjectWithTasks(projectId);
-  if (!project) {
-    redirect(`/workspace/${workspaceId}`);
-  }
+  if (!project) redirect(`/workspace/${workspaceId}`);
+
+  const hasAccess = await canAccessProject(projectId, session.user.id);
+  if (!hasAccess) redirect(`/workspace/${workspaceId}`);
 
   const members = await WorkspaceService.getMembers(workspaceId);
 
@@ -60,6 +60,7 @@ export default async function ProjectPage({
     <ProjectContent
       project={{
         id: project.id,
+        workspaceId: project.workspaceId,
         name: project.name,
         description: project.description ?? null,
         color: project.color ?? null,
