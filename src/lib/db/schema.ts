@@ -243,7 +243,7 @@ export const projectViews = mysqlTable(
     config: json("config")
       .$type<{
         groupBy: "none" | "status" | "priority" | "assignee" | "layer";
-        viewMode: "list" | "tree";
+        viewMode: "list" | "tree" | "kanban";
         isCompact: boolean;
       }>()
       .notNull(),

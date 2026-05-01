@@ -11,8 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Layers, List, GitBranch, Minimize2, Maximize2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, List, GitBranch, Minimize2, Maximize2, LayoutDashboard } from "lucide-react";
 import { TaskTreeView } from "./TaskTreeView";
+import { KanbanBoard } from "./KanbanBoard";
 import { Button } from "@/components/ui/button";
 
 interface Status {
@@ -76,7 +77,7 @@ interface TaskListProps {
 }
 
 type GroupBy = "none" | "status" | "priority" | "assignee" | "layer";
-type ViewMode = "list" | "tree";
+type ViewMode = "list" | "tree" | "kanban";
 
 const priorityOrder = ["Urgent", "High", "Medium", "Low", "None"] as const;
 const priorityColors: Record<string, string> = {
@@ -193,56 +194,64 @@ export function TaskList({
       <div className="p-6 space-y-4">
         {/* View Controls */}
         <div className="flex items-center justify-between">
-          {/* Group By Selector */}
+          {/* Group By Selector — hidden in Kanban */}
           <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Group by:</span>
-            <Select
-              value={groupBy}
-              onValueChange={(v) => {
-                const nextGroupBy = v as GroupBy;
-                const nextViewMode = v !== "layer" ? "list" : viewMode;
-                setGroupBy(nextGroupBy);
-                if (v !== "layer") setViewMode("list");
-                notifyChange({ groupBy: nextGroupBy, viewMode: nextViewMode, isCompact });
-              }}
-            >
-              <SelectTrigger className="w-32 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
-                <SelectItem value="priority">Priority</SelectItem>
-                <SelectItem value="assignee">Assignee</SelectItem>
-                <SelectItem value="layer">Layer</SelectItem>
-              </SelectContent>
-            </Select>
+            {viewMode === "kanban" ? (
+              <span className="text-sm text-muted-foreground">Grouped by status</span>
+            ) : (
+              <>
+                <Layers className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Group by:</span>
+                <Select
+                  value={groupBy}
+                  onValueChange={(v) => {
+                    const nextGroupBy = v as GroupBy;
+                    const nextViewMode = v !== "layer" ? "list" : viewMode;
+                    setGroupBy(nextGroupBy);
+                    if (v !== "layer") setViewMode("list");
+                    notifyChange({ groupBy: nextGroupBy, viewMode: nextViewMode, isCompact });
+                  }}
+                >
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="assignee">Assignee</SelectItem>
+                    <SelectItem value="layer">Layer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
 
           {/* View Controls */}
           <div className="flex items-center gap-2">
-            {/* Compact Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => {
-                const next = !isCompact;
-                setIsCompact(next);
-                notifyChange({ groupBy, viewMode, isCompact: next });
-              }}
-              title={isCompact ? "Normal view" : "Compact view"}
-            >
-              {isCompact ? (
-                <Maximize2 className="h-4 w-4" />
-              ) : (
-                <Minimize2 className="h-4 w-4" />
-              )}
-            </Button>
+            {/* Compact Toggle — hidden in Kanban */}
+            {viewMode !== "kanban" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={() => {
+                  const next = !isCompact;
+                  setIsCompact(next);
+                  notifyChange({ groupBy, viewMode, isCompact: next });
+                }}
+                title={isCompact ? "Normal view" : "Compact view"}
+              >
+                {isCompact ? (
+                  <Maximize2 className="h-4 w-4" />
+                ) : (
+                  <Minimize2 className="h-4 w-4" />
+                )}
+              </Button>
+            )}
 
-            {/* View Mode Toggle - only show when grouped by layer */}
-            {groupBy === "layer" && (
+            {/* List/Tree toggle — only when grouped by layer and not kanban */}
+            {groupBy === "layer" && viewMode !== "kanban" && (
               <div className="flex items-center gap-1 border rounded-md p-0.5">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
@@ -264,11 +273,34 @@ export function TaskList({
                 </Button>
               </div>
             )}
+
+            {/* Kanban toggle */}
+            <Button
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => {
+                const next: ViewMode = viewMode === "kanban" ? "list" : "kanban";
+                setViewMode(next);
+                notifyChange({ groupBy, viewMode: next, isCompact });
+              }}
+              title="Kanban view"
+            >
+              <LayoutDashboard className="h-4 w-4 mr-1" />
+              Kanban
+            </Button>
           </div>
         </div>
 
         {/* Task View */}
-        {viewMode === "tree" ? (
+        {viewMode === "kanban" ? (
+          <KanbanBoard
+            projectId={projectId}
+            statuses={statuses}
+            tasks={tasks}
+            onTaskClick={handleTaskClick}
+          />
+        ) : viewMode === "tree" ? (
           <TaskTreeView
             tasks={tasks}
             layers={layers}
@@ -327,7 +359,7 @@ export function TaskList({
           </>
         )}
 
-        <QuickAddTask projectId={projectId} />
+        {viewMode !== "kanban" && <QuickAddTask projectId={projectId} />}
       </div>
 
       <TaskDetailPanel
