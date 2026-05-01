@@ -40,7 +40,7 @@ export function Header() {
         <ThemeSwitcher />
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative text-sidebar-foreground/70">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
         </Button>
