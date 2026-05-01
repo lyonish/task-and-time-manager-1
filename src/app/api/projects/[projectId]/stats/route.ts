@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { WorkspaceService } from "@/services/workspace.service";
 import { ProjectService } from "@/services/project.service";
 import { db } from "@/lib/db";
-import { workLogs, tasks, users } from "@/lib/db/schema";
+import { workLogs, tasks } from "@/lib/db/schema";
 import { eq, and, gte, lt, isNotNull, inArray } from "drizzle-orm";
 import type { StatsResponse, StatsDimension } from "@/app/api/workspaces/[workspaceId]/stats/route";
 
@@ -40,6 +40,7 @@ export async function GET(
     const userMap = new Map(
       members.flatMap((m) => m.user ? [[m.user.id, { name: m.user.name, avatarUrl: m.user.avatarUrl }]] : [])
     );
+    const memberUserIds = [...userMap.keys()];
 
     const projectTasks = await db
       .select({ id: tasks.id })
@@ -47,7 +48,7 @@ export async function GET(
       .where(eq(tasks.projectId, projectId));
 
     const taskIds = projectTasks.map((t) => t.id);
-    if (taskIds.length === 0) {
+    if (taskIds.length === 0 || memberUserIds.length === 0) {
       return NextResponse.json({ dimension, from, to, totalSeconds: 0, rows: [] } satisfies StatsResponse);
     }
 
@@ -65,19 +66,10 @@ export async function GET(
           isNotNull(workLogs.endTime),
           gte(workLogs.startTime, start),
           lt(workLogs.startTime, end),
-          inArray(workLogs.taskId, taskIds)
+          inArray(workLogs.taskId, taskIds),
+          inArray(workLogs.userId, memberUserIds)
         )
       );
-
-    // Fill in any users not in workspace members (e.g. removed members)
-    const missingUserIds = [...new Set(logs.map((l) => l.userId).filter((id) => !userMap.has(id)))];
-    if (missingUserIds.length > 0) {
-      const extraUsers = await db
-        .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
-        .from(users)
-        .where(inArray(users.id, missingUserIds));
-      for (const u of extraUsers) userMap.set(u.id, { name: u.name, avatarUrl: u.avatarUrl });
-    }
 
     type Accumulator = {
       key: string;

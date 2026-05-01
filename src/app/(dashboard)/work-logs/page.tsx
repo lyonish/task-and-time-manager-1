@@ -342,6 +342,7 @@ export default function WorkLogsPage() {
   const [date, setDate] = useState(new Date());
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [tasks, setTasks] = useState<TaskOption[]>([]);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [newRowKey, setNewRowKey] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -357,13 +358,23 @@ export default function WorkLogsPage() {
     }
   }, []);
 
-  const fetchTasks = useCallback(async () => {
-    const res = await fetch("/api/my-tasks");
+  const fetchTasks = useCallback(async (wsId: string | null) => {
+    const url = wsId ? `/api/my-tasks?workspaceId=${wsId}` : "/api/my-tasks";
+    const res = await fetch(url);
     if (res.ok) setTasks(await res.json());
   }, []);
 
+  useEffect(() => {
+    fetch("/api/workspaces")
+      .then((r) => r.json())
+      .then((ws: { id: string }[]) => {
+        const id = ws[0]?.id ?? null;
+        setWorkspaceId(id);
+        fetchTasks(id);
+      });
+  }, [fetchTasks]);
+
   useEffect(() => { fetchLogs(date); }, [date, fetchLogs]);
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const goPrev = () => setDate((d) => subDays(d, 1));
   const goNext = () => setDate((d) => addDays(d, 1));

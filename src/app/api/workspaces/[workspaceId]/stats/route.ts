@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { WorkspaceService } from "@/services/workspace.service";
 import { db } from "@/lib/db";
-import { workLogs, tasks, projects, users } from "@/lib/db/schema";
+import { workLogs, tasks, projects } from "@/lib/db/schema";
 import { eq, and, gte, lt, isNotNull, inArray } from "drizzle-orm";
 
 export type StatsDimension = "member" | "project" | "month";
@@ -83,13 +83,17 @@ export async function GET(
     const taskProjectMap = new Map(projectTasks.map((t) => [t.id, t.projectId]));
     const projectMap = new Map(workspaceProjects.map((p) => [p.id, p]));
 
-    // Get workspace members for user info (seed map)
+    // Get workspace members for user info and scoping
     const members = await WorkspaceService.getMembers(workspaceId);
     const userMap = new Map(
       members.flatMap((m) => m.user ? [[m.user.id, { name: m.user.name, avatarUrl: m.user.avatarUrl }]] : [])
     );
+    const memberUserIds = [...userMap.keys()];
+    if (memberUserIds.length === 0) {
+      return NextResponse.json({ dimension, from, to, totalSeconds: 0, rows: [] } satisfies StatsResponse);
+    }
 
-    // Fetch completed work logs in date range for workspace tasks
+    // Fetch completed work logs in date range, scoped to workspace tasks AND workspace members
     const logs = await db
       .select({
         id: workLogs.id,
@@ -104,19 +108,10 @@ export async function GET(
           isNotNull(workLogs.endTime),
           gte(workLogs.startTime, start),
           lt(workLogs.startTime, end),
-          inArray(workLogs.taskId, taskIds)
+          inArray(workLogs.taskId, taskIds),
+          inArray(workLogs.userId, memberUserIds)
         )
       );
-
-    // Fill in any users not in workspace members (e.g. removed members)
-    const missingUserIds = [...new Set(logs.map((l) => l.userId).filter((id) => !userMap.has(id)))];
-    if (missingUserIds.length > 0) {
-      const extraUsers = await db
-        .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
-        .from(users)
-        .where(inArray(users.id, missingUserIds));
-      for (const u of extraUsers) userMap.set(u.id, { name: u.name, avatarUrl: u.avatarUrl });
-    }
 
     const rows = buildRows(logs, dimension, taskProjectMap, projectMap, userMap);
 
