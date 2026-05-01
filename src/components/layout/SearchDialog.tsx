@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Search, FolderOpen, CheckSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SearchResult } from "@/app/api/search/route";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 type ResultItem =
   | { kind: "project"; id: string; name: string; color: string | null }
@@ -13,6 +14,7 @@ type ResultItem =
 
 export function SearchDialog() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult>({ projects: [], tasks: [] });
@@ -118,7 +120,7 @@ export function SearchDialog() {
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search tasks and projects…"
+                placeholder={t.search.placeholder}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <kbd className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5 font-mono">ESC</kbd>
@@ -128,12 +130,12 @@ export function SearchDialog() {
             {query.trim() && (
               <div className="max-h-80 overflow-y-auto py-2">
                 {!hasResults && !loading && (
-                  <p className="px-4 py-6 text-sm text-muted-foreground text-center">No results for "{query}"</p>
+                  <p className="px-4 py-6 text-sm text-muted-foreground text-center">{t.search.noResults} "{query}"</p>
                 )}
 
                 {results.projects.length > 0 && (
                   <div>
-                    <p className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Projects</p>
+                    <p className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t.search.projects}</p>
                     {results.projects.map((p, i) => {
                       const idx = i;
                       return (
@@ -157,7 +159,7 @@ export function SearchDialog() {
 
                 {results.tasks.length > 0 && (
                   <div>
-                    <p className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tasks</p>
+                    <p className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t.search.tasks}</p>
                     {results.tasks.map((t, i) => {
                       const idx = results.projects.length + i;
                       return (
@@ -187,7 +189,7 @@ export function SearchDialog() {
             {/* Footer hint */}
             {!query.trim() && (
               <div className="px-4 py-4 text-xs text-muted-foreground text-center">
-                Type to search tasks and projects
+                {t.search.typeToSearch}
               </div>
             )}
           </div>
@@ -203,7 +205,7 @@ export function SearchDialog() {
         className="flex items-center gap-2 h-9 w-full max-w-xs px-4 rounded-full bg-muted text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
       >
         <Search className="h-4 w-4 shrink-0" />
-        <span className="flex-1 text-left">Search tasks, projects…</span>
+        <span className="flex-1 text-left">{t.search.placeholder}</span>
         <kbd className="hidden sm:inline text-[10px] border border-border rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
       </button>
       {dialog}

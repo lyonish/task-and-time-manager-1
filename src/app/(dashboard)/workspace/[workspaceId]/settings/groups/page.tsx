@@ -17,6 +17,7 @@ import { Plus, Pencil, Trash2, Users, ChevronDown, ChevronRight, X, Loader2 } fr
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface GroupMember {
   id: string;
@@ -39,6 +40,7 @@ interface WorkspaceMember {
 export default function GroupsSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { canEdit } = useWorkspaceRole();
+  const { t } = useLanguage();
   const [groups, setGroups] = useState<Group[]>([]);
   const [wsMembers, setWsMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ export default function GroupsSettingsPage() {
   };
 
   const deleteGroup = async (group: Group) => {
-    if (!confirm(`Delete group "${group.name}"? This will revoke project access granted through this group.`)) return;
+    if (!confirm(t.settings.groups.deleteConfirm(group.name))) return;
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/groups/${group.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error);
@@ -171,12 +173,12 @@ export default function GroupsSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Groups</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage user groups for project access control.</p>
+          <h1 className="text-2xl font-bold">{t.settings.groups.title}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t.settings.groups.subtitle}</p>
         </div>
         {canEdit && (
           <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />New Group
+            <Plus className="h-4 w-4 mr-2" />{t.settings.groups.newGroup}
           </Button>
         )}
       </div>
@@ -200,7 +202,7 @@ export default function GroupsSettingsPage() {
                 <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="font-medium flex-1">{group.name}</span>
                 {group.isDefault && (
-                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">default</span>
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{t.settings.groups.default}</span>
                 )}
                 <span className="text-xs text-muted-foreground">{group.members.length} member{group.members.length !== 1 ? "s" : ""}</span>
 
@@ -266,19 +268,19 @@ export default function GroupsSettingsPage() {
                             </button>
                           ))}
                           <Button variant="ghost" size="sm" className="mt-1" onClick={() => setAddingToGroup(null)}>
-                            Cancel
+                            {t.common.cancel}
                           </Button>
                         </div>
                       ) : (
                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAddingToGroup(group.id)}>
-                          <Plus className="h-3 w-3 mr-1" /> Add member
+                          <Plus className="h-3 w-3 mr-1" /> {t.settings.groups.addMember}
                         </Button>
                       )}
                     </div>
                   )}
 
                   {group.members.length === 0 && !group.isDefault && (
-                    <div className="px-4 py-3 text-sm text-muted-foreground">No members yet.</div>
+                    <div className="px-4 py-3 text-sm text-muted-foreground">{t.settings.groups.noMembers}</div>
                   )}
                 </div>
               )}
@@ -290,18 +292,18 @@ export default function GroupsSettingsPage() {
       {/* Create group dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>New group</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t.settings.groups.newGroup}</DialogTitle></DialogHeader>
           <Input
             value={createName}
             onChange={(e) => setCreateName(e.target.value)}
-            placeholder="e.g. Team A, Division X"
+            placeholder={t.settings.groups.namePlaceholder}
             onKeyDown={(e) => e.key === "Enter" && createGroup()}
             autoFocus
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>{t.common.cancel}</Button>
             <Button onClick={createGroup} disabled={creating || !createName.trim()}>
-              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Create
+              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}{t.common.add}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -310,7 +312,7 @@ export default function GroupsSettingsPage() {
       {/* Rename dialog */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Rename group</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t.common.rename}</DialogTitle></DialogHeader>
           <Input
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
@@ -318,8 +320,8 @@ export default function GroupsSettingsPage() {
             autoFocus
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button onClick={renameGroup} disabled={!renameValue.trim()}>Save</Button>
+            <Button variant="ghost" onClick={() => setRenameOpen(false)}>{t.common.cancel}</Button>
+            <Button onClick={renameGroup} disabled={!renameValue.trim()}>{t.common.save}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

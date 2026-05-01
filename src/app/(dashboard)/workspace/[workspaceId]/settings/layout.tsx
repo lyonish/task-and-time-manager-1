@@ -5,24 +5,26 @@ import { usePathname, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Settings, Users, CreditCard, UsersRound } from "lucide-react";
 import { WorkspaceRoleProvider, useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
-
-const ALL_NAV = [
-  { label: "General",  icon: Settings,   segment: "general",  adminOnly: false },
-  { label: "Members",  icon: Users,       segment: "members",  adminOnly: false },
-  { label: "Groups",   icon: UsersRound,  segment: "groups",   adminOnly: false },
-  { label: "Billing",  icon: CreditCard,  segment: "billing",  adminOnly: true  },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function SettingsNav({ workspaceId }: { workspaceId: string }) {
   const pathname = usePathname();
   const { canEdit } = useWorkspaceRole();
+  const { t } = useLanguage();
+
+  const ALL_NAV = [
+    { label: t.settings.nav.general,  icon: Settings,   segment: "general",  adminOnly: false },
+    { label: t.settings.nav.members,  icon: Users,       segment: "members",  adminOnly: false },
+    { label: t.settings.nav.groups,   icon: UsersRound,  segment: "groups",   adminOnly: false },
+    { label: t.settings.nav.billing,  icon: CreditCard,  segment: "billing",  adminOnly: true  },
+  ];
 
   const navItems = ALL_NAV.filter((item) => !item.adminOnly || canEdit);
 
   return (
     <nav className="w-56 shrink-0 border-r border-border p-4 space-y-1">
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-2">
-        Settings
+        {t.nav.settings}
       </p>
       {navItems.map(({ label, icon: Icon, segment }) => {
         const href = `/workspace/${workspaceId}/settings/${segment}`;

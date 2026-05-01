@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
 import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 type Role = "Admin" | "Member" | "Guest";
 
@@ -51,6 +52,7 @@ function RoleBadge({ role, isOwner }: { role: Role; isOwner: boolean }) {
 export default function MembersSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { canEdit } = useWorkspaceRole();
+  const { t } = useLanguage();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -100,7 +102,7 @@ export default function MembersSettingsPage() {
   };
 
   const handleRemove = async (userId: string) => {
-    if (!confirm("Remove this member from the workspace?")) return;
+    if (!confirm(t.settings.members.removeConfirm)) return;
     await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, { method: "DELETE" });
     await loadMembers();
   };
@@ -108,16 +110,16 @@ export default function MembersSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Members</h1>
+        <h1 className="text-2xl font-bold">{t.settings.members.title}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Manage who has access to this workspace.
+          {t.settings.members.subtitle}
         </p>
       </div>
 
       {/* Invite form — admin only */}
       {canEdit && (
         <div className="border border-border rounded-lg p-5 space-y-4">
-          <h2 className="font-semibold text-sm">Invite a member</h2>
+          <h2 className="font-semibold text-sm">{t.settings.members.invite}</h2>
           <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 space-y-1">
               <Label htmlFor="invite-email" className="sr-only">Email</Label>
@@ -142,7 +144,7 @@ export default function MembersSettingsPage() {
             </Select>
             <Button type="submit" disabled={inviting}>
               {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              <span className="ml-2">Add</span>
+              <span className="ml-2">{t.settings.members.add}</span>
             </Button>
           </form>
           {inviteError && <p className="text-sm text-red-500">{inviteError}</p>}

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface Project {
   id: string;
@@ -37,25 +38,26 @@ interface SidebarProps {
 export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarProps) {
   const pathname = usePathname();
   const [isProjectsOpen, setIsProjectsOpen] = useState(true);
+  const { t } = useLanguage();
 
   const navItems = [
     {
-      label: "Home",
+      label: t.nav.home,
       href: workspaceId ? `/workspace/${workspaceId}` : "/",
       icon: Home,
     },
     {
-      label: "My Tasks",
+      label: t.nav.myTasks,
       href: "/my-tasks",
       icon: CheckSquare,
     },
     {
-      label: "Work Log",
+      label: t.nav.workLog,
       href: "/work-logs",
       icon: ClipboardList,
     },
     {
-      label: "Statistics",
+      label: t.nav.statistics,
       href: workspaceId ? `/workspace/${workspaceId}/stats` : "/",
       icon: BarChart2,
     },
@@ -103,7 +105,7 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
             >
               <span className="flex items-center gap-3">
                 <FolderKanban className="h-4 w-4" />
-                Projects
+                {t.nav.projects}
               </span>
               <ChevronDown
                 className={cn(
@@ -163,7 +165,7 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
           )}
         >
           <Settings className="h-4 w-4" />
-          Settings
+          {t.nav.settings}
         </Link>
       </div>
     </aside>

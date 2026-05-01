@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useWorkspaceRole } from "@/components/settings/WorkspaceRoleContext";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface WorkspaceData {
   id: string;
@@ -19,6 +20,7 @@ interface WorkspaceData {
 export default function GeneralSettingsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { canEdit } = useWorkspaceRole();
+  const { t } = useLanguage();
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -79,13 +81,13 @@ export default function GeneralSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">General</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage your organization's basic information.</p>
+        <h1 className="text-2xl font-bold">{t.settings.general.title}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t.settings.general.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="name">Organization name</Label>
+          <Label htmlFor="name">{t.settings.general.orgName}</Label>
           <Input
             id="name"
             value={name}
@@ -97,20 +99,20 @@ export default function GeneralSettingsPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{t.settings.general.description}</Label>
           <Textarea
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             maxLength={1000}
-            placeholder="What does your organization do?"
+            placeholder={t.settings.general.descriptionPlaceholder}
             disabled={!canEdit}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="iconUrl">Icon URL</Label>
+          <Label htmlFor="iconUrl">{t.settings.general.iconUrl}</Label>
           <div className="flex items-center gap-3">
             {iconUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -141,7 +143,7 @@ export default function GeneralSettingsPage() {
         {canEdit && (
           <Button type="submit" disabled={saving}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save changes
+            {t.common.save}
           </Button>
         )}
       </form>

@@ -4,21 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { User, Lock, Palette } from "lucide-react";
-
-const navItems = [
-  { label: "Profile", icon: User, segment: "profile" },
-  { label: "Account", icon: Lock, segment: "account" },
-  { label: "Appearance", icon: Palette, segment: "appearance" },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export default function PersonalSettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { label: t.settings.nav.profile,    icon: User,    segment: "profile" },
+    { label: t.settings.nav.account,    icon: Lock,    segment: "account" },
+    { label: t.settings.nav.appearance, icon: Palette, segment: "appearance" },
+  ];
 
   return (
     <div className="flex h-full">
       <nav className="w-56 shrink-0 border-r border-border p-4 space-y-1">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-2">
-          Personal Settings
+          {t.nav.settings}
         </p>
         {navItems.map(({ label, icon: Icon, segment }) => {
           const href = `/settings/${segment}`;
