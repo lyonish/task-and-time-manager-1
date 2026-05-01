@@ -105,6 +105,7 @@ export async function GET(
       .from(workLogs)
       .where(
         and(
+          isNotNull(workLogs.startTime),
           isNotNull(workLogs.endTime),
           gte(workLogs.startTime, start),
           lt(workLogs.startTime, end),
@@ -123,7 +124,7 @@ export async function GET(
   }
 }
 
-type LogRow = { id: string; userId: string; taskId: string | null; startTime: Date; endTime: Date | null };
+type LogRow = { id: string; userId: string; taskId: string | null; startTime: Date | null; endTime: Date | null };
 
 function buildRows(
   logs: LogRow[],
@@ -145,7 +146,7 @@ function buildRows(
   const acc = new Map<string, Accumulator>();
 
   for (const log of logs) {
-    if (!log.endTime || !log.taskId) continue;
+    if (!log.endTime || !log.startTime || !log.taskId) continue;
     const seconds = Math.round((log.endTime.getTime() - log.startTime.getTime()) / 1000);
     if (seconds <= 0) continue;
 

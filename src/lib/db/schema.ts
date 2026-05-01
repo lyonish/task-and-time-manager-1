@@ -7,6 +7,7 @@ import {
   int,
   boolean,
   json,
+  decimal,
   index,
   uniqueIndex,
 } from "drizzle-orm/mysql-core";
@@ -342,6 +343,7 @@ export const tasks = mysqlTable(
     assigneeId: varchar("assignee_id", { length: 36 }),
     createdBy: varchar("created_by", { length: 36 }).notNull(),
     dueDate: timestamp("due_date"),
+    estimatedHours: decimal("estimated_hours", { precision: 6, scale: 2 }),
     priority: mysqlEnum("priority", ["None", "Low", "Medium", "High", "Urgent"])
       .notNull()
       .default("None"),
@@ -512,7 +514,9 @@ export const workLogs = mysqlTable(
       .$defaultFn(() => crypto.randomUUID()),
     userId: varchar("user_id", { length: 36 }).notNull(),
     taskId: varchar("task_id", { length: 36 }),
-    startTime: timestamp("start_time").notNull(),
+    estimatedStartTime: timestamp("estimated_start_time"),
+    estimatedEndTime: timestamp("estimated_end_time"),
+    startTime: timestamp("start_time"),
     endTime: timestamp("end_time"),
     note: text("note"),
     createdAt: timestamp("created_at").defaultNow(),

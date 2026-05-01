@@ -45,6 +45,7 @@ interface Task {
   parentTaskId: string | null;
   assigneeId: string | null;
   dueDate: Date | null;
+  estimatedHours: string | null;
   updatedAt?: Date | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
   assignee?: {

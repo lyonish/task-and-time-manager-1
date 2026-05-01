@@ -5,7 +5,9 @@ import { z } from "zod";
 
 const updateWorkLogSchema = z.object({
   taskId: z.string().nullable().optional(),
-  startTime: z.string().datetime().optional(),
+  estimatedStartTime: z.string().datetime().nullable().optional(),
+  estimatedEndTime: z.string().datetime().nullable().optional(),
+  startTime: z.string().datetime().nullable().optional(),
   endTime: z.string().datetime().nullable().optional(),
   note: z.string().nullable().optional(),
 });
@@ -36,12 +38,17 @@ export async function PATCH(
       );
     }
 
+    const toDate = (v: string | null | undefined): Date | null | undefined => {
+      if (v === undefined) return undefined;
+      return v ? new Date(v) : null;
+    };
+
     const log = await WorkLogService.update(logId, {
       taskId: parsed.data.taskId,
-      startTime: parsed.data.startTime ? new Date(parsed.data.startTime) : undefined,
-      endTime: parsed.data.endTime !== undefined
-        ? parsed.data.endTime ? new Date(parsed.data.endTime) : null
-        : undefined,
+      estimatedStartTime: toDate(parsed.data.estimatedStartTime),
+      estimatedEndTime: toDate(parsed.data.estimatedEndTime),
+      startTime: toDate(parsed.data.startTime),
+      endTime: toDate(parsed.data.endTime),
       note: parsed.data.note,
     });
 

@@ -138,6 +138,9 @@ export class TaskService {
       updates.parentTaskId = data.parentTaskId;
       changes.parentTaskId = { old: task.parentTaskId, new: data.parentTaskId };
     }
+    if (data.estimatedHours !== undefined) {
+      updates.estimatedHours = data.estimatedHours;
+    }
 
     if (Object.keys(updates).length > 0) {
       await db

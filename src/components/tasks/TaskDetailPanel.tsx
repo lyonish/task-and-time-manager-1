@@ -28,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus, ChevronRight, Clock } from "lucide-react";
+import { Calendar, User, Flag, Loader2, Trash2, MoreHorizontal, Layers, GitBranch, Plus, ChevronRight, Clock, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
@@ -75,6 +75,7 @@ interface Task {
   parentTaskId: string | null;
   assigneeId: string | null;
   dueDate: Date | null;
+  estimatedHours: string | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
   assignee?: {
     id: string;
@@ -126,6 +127,7 @@ export function TaskDetailPanel({
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [priority, setPriority] = useState<typeof priorities[number]>("None");
   const [dueDate, setDueDate] = useState("");
+  const [estimatedHours, setEstimatedHours] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -162,6 +164,7 @@ export function TaskDetailPanel({
       setAssigneeId(task.assigneeId);
       setPriority(task.priority);
       setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "");
+      setEstimatedHours(task.estimatedHours ?? "");
       loadComments(task.id);
       loadSteps(task.id);
       setWorkLogs([]);
@@ -237,6 +240,7 @@ export function TaskDetailPanel({
           description: description || null,
           priority,
           dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
         }),
       });
 
@@ -684,6 +688,25 @@ export function TaskDetailPanel({
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 onBlur={handleSave}
+                className="flex-1"
+              />
+            </div>
+
+            {/* Estimated Hours */}
+            <div className="flex items-center gap-4">
+              <Label className="w-24 text-muted-foreground flex items-center gap-2">
+                <Timer className="h-4 w-4" />
+                Est. hours
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                max={9999}
+                step={0.5}
+                value={estimatedHours}
+                onChange={(e) => setEstimatedHours(e.target.value)}
+                onBlur={handleSave}
+                placeholder="—"
                 className="flex-1"
               />
             </div>

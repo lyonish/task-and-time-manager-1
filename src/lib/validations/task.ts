@@ -8,6 +8,7 @@ export const createTaskSchema = z.object({
   layerId: z.string().uuid().optional().nullable(),
   parentTaskId: z.string().uuid().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).max(9999).nullable().optional(),
   priority: z.enum(["None", "Low", "Medium", "High", "Urgent"]).optional().default("None"),
 });
 
@@ -19,6 +20,7 @@ export const updateTaskSchema = z.object({
   layerId: z.string().uuid().optional().nullable(),
   parentTaskId: z.string().uuid().optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  estimatedHours: z.number().min(0).max(9999).nullable().optional(),
   priority: z.enum(["None", "Low", "Medium", "High", "Urgent"]).optional(),
 });
 

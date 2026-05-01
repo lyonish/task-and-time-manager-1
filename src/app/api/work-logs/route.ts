@@ -5,7 +5,9 @@ import { z } from "zod";
 
 const createWorkLogSchema = z.object({
   taskId: z.string().nullable().optional(),
-  startTime: z.string().datetime(),
+  estimatedStartTime: z.string().datetime().nullable().optional(),
+  estimatedEndTime: z.string().datetime().nullable().optional(),
+  startTime: z.string().datetime().nullable().optional(),
   endTime: z.string().datetime().nullable().optional(),
   note: z.string().nullable().optional(),
 });
@@ -49,7 +51,9 @@ export async function POST(request: NextRequest) {
     const log = await WorkLogService.create(
       {
         taskId: parsed.data.taskId,
-        startTime: new Date(parsed.data.startTime),
+        estimatedStartTime: parsed.data.estimatedStartTime ? new Date(parsed.data.estimatedStartTime) : null,
+        estimatedEndTime: parsed.data.estimatedEndTime ? new Date(parsed.data.estimatedEndTime) : null,
+        startTime: parsed.data.startTime ? new Date(parsed.data.startTime) : null,
         endTime: parsed.data.endTime ? new Date(parsed.data.endTime) : null,
         note: parsed.data.note,
       },

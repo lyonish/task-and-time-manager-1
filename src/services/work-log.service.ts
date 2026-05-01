@@ -1,34 +1,39 @@
 import { db } from "@/lib/db";
 import { workLogs } from "@/lib/db/schema";
-import { eq, and, gte, lt } from "drizzle-orm";
+import { eq, and, gte, lt, or, isNull, isNotNull } from "drizzle-orm";
 
 export interface CreateWorkLogInput {
   taskId?: string | null;
-  startTime: Date;
+  estimatedStartTime?: Date | null;
+  estimatedEndTime?: Date | null;
+  startTime?: Date | null;
   endTime?: Date | null;
   note?: string | null;
 }
 
 export interface UpdateWorkLogInput {
   taskId?: string | null;
-  startTime?: Date;
+  estimatedStartTime?: Date | null;
+  estimatedEndTime?: Date | null;
+  startTime?: Date | null;
   endTime?: Date | null;
   note?: string | null;
 }
 
 export class WorkLogService {
-  // Get own work logs for a date
   static async getForDate(date: Date, userId: string) {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
 
-    return db.query.workLogs.findMany({
+    const rows = await db.query.workLogs.findMany({
       where: and(
         eq(workLogs.userId, userId),
-        gte(workLogs.startTime, start),
-        lt(workLogs.startTime, end)
+        or(
+          and(isNotNull(workLogs.startTime), gte(workLogs.startTime, start), lt(workLogs.startTime, end)),
+          and(isNull(workLogs.startTime), isNotNull(workLogs.estimatedStartTime), gte(workLogs.estimatedStartTime, start), lt(workLogs.estimatedStartTime, end))
+        )
       ),
       with: {
         task: {
@@ -38,11 +43,21 @@ export class WorkLogService {
           },
         },
       },
-      orderBy: (workLogs, { asc }) => [asc(workLogs.startTime)],
+    });
+
+    // Sort: actual entries first by actualStart asc; estimate-only (no actual) → bottom by estimatedStart asc
+    return rows.sort((a, b) => {
+      const aActual = a.startTime;
+      const bActual = b.startTime;
+      if (!aActual && !bActual) {
+        return (a.estimatedStartTime?.getTime() ?? 0) - (b.estimatedStartTime?.getTime() ?? 0);
+      }
+      if (!aActual) return 1;
+      if (!bActual) return -1;
+      return aActual.getTime() - bActual.getTime();
     });
   }
 
-  // Get all work logs for a specific task (all members)
   static async getForTask(taskId: string) {
     return db.query.workLogs.findMany({
       where: eq(workLogs.taskId, taskId),
@@ -74,7 +89,9 @@ export class WorkLogService {
       id,
       userId,
       taskId: data.taskId ?? null,
-      startTime: data.startTime,
+      estimatedStartTime: data.estimatedStartTime ?? null,
+      estimatedEndTime: data.estimatedEndTime ?? null,
+      startTime: data.startTime ?? null,
       endTime: data.endTime ?? null,
       note: data.note ?? null,
     });
@@ -86,6 +103,8 @@ export class WorkLogService {
       .update(workLogs)
       .set({
         ...(data.taskId !== undefined && { taskId: data.taskId }),
+        ...(data.estimatedStartTime !== undefined && { estimatedStartTime: data.estimatedStartTime }),
+        ...(data.estimatedEndTime !== undefined && { estimatedEndTime: data.estimatedEndTime }),
         ...(data.startTime !== undefined && { startTime: data.startTime }),
         ...(data.endTime !== undefined && { endTime: data.endTime }),
         ...(data.note !== undefined && { note: data.note }),
