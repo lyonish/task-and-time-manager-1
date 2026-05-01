@@ -14,6 +14,7 @@ import {
   X,
   Clock,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -528,6 +529,17 @@ export default function WorkLogsPage() {
                           <span className="text-xs text-muted-foreground truncate">
                             · {log.task.project.name}
                           </span>
+                          {workspaceId && (
+                            <a
+                              href={`/workspace/${workspaceId}/project/${log.task.project.id}?taskId=${log.task.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                            </a>
+                          )}
                         </div>
                       ) : (
                         <span className="text-sm text-muted-foreground/50">—</span>
