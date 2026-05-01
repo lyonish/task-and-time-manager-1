@@ -10,6 +10,7 @@ const createWorkLogSchema = z.object({
   startTime: z.string().datetime().nullable().optional(),
   endTime: z.string().datetime().nullable().optional(),
   note: z.string().nullable().optional(),
+  detailNote: z.string().nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
         startTime: parsed.data.startTime ? new Date(parsed.data.startTime) : null,
         endTime: parsed.data.endTime ? new Date(parsed.data.endTime) : null,
         note: parsed.data.note,
+        detailNote: parsed.data.detailNote,
       },
       session.user.id
     );

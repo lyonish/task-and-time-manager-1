@@ -9,6 +9,7 @@ export interface CreateWorkLogInput {
   startTime?: Date | null;
   endTime?: Date | null;
   note?: string | null;
+  detailNote?: string | null;
 }
 
 export interface UpdateWorkLogInput {
@@ -18,6 +19,7 @@ export interface UpdateWorkLogInput {
   startTime?: Date | null;
   endTime?: Date | null;
   note?: string | null;
+  detailNote?: string | null;
 }
 
 export class WorkLogService {
@@ -94,6 +96,7 @@ export class WorkLogService {
       startTime: data.startTime ?? null,
       endTime: data.endTime ?? null,
       note: data.note ?? null,
+      detailNote: data.detailNote ?? null,
     });
     return this.getById(id);
   }
@@ -108,6 +111,7 @@ export class WorkLogService {
         ...(data.startTime !== undefined && { startTime: data.startTime }),
         ...(data.endTime !== undefined && { endTime: data.endTime }),
         ...(data.note !== undefined && { note: data.note }),
+        ...(data.detailNote !== undefined && { detailNote: data.detailNote }),
       })
       .where(eq(workLogs.id, id));
     return this.getById(id);

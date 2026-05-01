@@ -519,6 +519,7 @@ export const workLogs = mysqlTable(
     startTime: timestamp("start_time"),
     endTime: timestamp("end_time"),
     note: text("note"),
+    detailNote: text("detail_note"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },

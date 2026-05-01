@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Pencil,
   Trash2,
   Check,
@@ -32,6 +33,7 @@ interface WorkLog {
   startTime: string | null;
   endTime: string | null;
   note: string | null;
+  detailNote: string | null;
   task: (TaskOption & { projectId: string }) | null;
 }
 
@@ -314,12 +316,14 @@ function LogRow({
   workspaceId: string | null;
   date: Date;
   onEdit: () => void;
-  onPatch: (id: string, data: { startTime: string | null; endTime: string | null }) => void;
+  onPatch: (id: string, data: { startTime?: string | null; endTime?: string | null; detailNote?: string | null }) => void;
 }) {
   const baseDate = new Date(log.estimatedStartTime ?? log.startTime ?? date);
 
+  const [expanded, setExpanded] = useState(false);
   const [actStart, setActStart] = useState(log.startTime ? format(new Date(log.startTime), "HH:mm") : "");
   const [actEnd, setActEnd] = useState(log.endTime ? format(new Date(log.endTime), "HH:mm") : "");
+  const [detailNote, setDetailNote] = useState(log.detailNote ?? "");
 
   function buildDatetime(timeStr: string): string | null {
     if (!timeStr) return null;
@@ -342,7 +346,8 @@ function LogRow({
   const actDuration = formatDuration(buildDatetime(actStart), buildDatetime(actEnd));
 
   return (
-    <tr className={cn("border-b last:border-0 hover:bg-accent/40 group", !log.startTime && !actStart && "bg-muted/10")}>
+    <>
+    <tr className={cn("border-b last:border-0 hover:bg-accent/40 group", !expanded && !log.startTime && !actStart && "bg-muted/10")}>
       {/* Est. Start */}
       <td className="px-2 py-2">
         <TimeCell time={log.estimatedStartTime} dimmed />
@@ -418,16 +423,48 @@ function LogRow({
       </td>
       {/* Actions */}
       <td className="px-2 py-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onEdit}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-muted-foreground"
+            onClick={() => setExpanded((v) => !v)}
+            title="Detail note"
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !expanded && "-rotate-90")} />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </td>
     </tr>
+    {expanded && (
+      <tr className={cn("border-b last:border-0", !log.startTime && !actStart && "bg-muted/10")}>
+        <td colSpan={4} />
+        <td colSpan={2} className="pr-2 pb-3 pt-1">
+          <textarea
+            value={detailNote}
+            onChange={(e) => setDetailNote(e.target.value)}
+            onBlur={() => {
+              if (detailNote !== (log.detailNote ?? "")) {
+                onPatch(log.id, { detailNote: detailNote || null });
+              }
+            }}
+            placeholder="Add detail note…"
+            rows={3}
+            className="w-full text-sm bg-transparent border border-border rounded-md px-3 py-2 resize-y placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </td>
+        <td />
+      </tr>
+    )}
+    </>
   );
 }
 
@@ -497,7 +534,7 @@ export default function WorkLogsPage() {
     }
   };
 
-  const handlePatch = async (id: string, data: { startTime: string | null; endTime: string | null }) => {
+  const handlePatch = async (id: string, data: { startTime?: string | null; endTime?: string | null; detailNote?: string | null }) => {
     await fetch(`/api/work-logs/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
