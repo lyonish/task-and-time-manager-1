@@ -203,7 +203,7 @@ function buildRows(
   }
 
   return Array.from(acc.values())
-    .sort((a, b) => b.totalSeconds - a.totalSeconds)
+    .sort((a, b) => dimension === "month" ? a.key.localeCompare(b.key) : b.totalSeconds - a.totalSeconds)
     .map((e) => ({
       key: e.key,
       label: e.label,
