@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { format, addDays, subDays, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,6 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface TaskOption {
   id: string;
@@ -49,6 +43,121 @@ function formatDuration(start: string, end: string | null) {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// --- Searchable task combobox ---
+function TaskCombobox({
+  tasks,
+  value,
+  onChange,
+}: {
+  tasks: TaskOption[];
+  value: string; // task id or "none"
+  onChange: (id: string) => void;
+}) {
+  const selected = tasks.find((t) => t.id === value) ?? null;
+  const [query, setQuery] = useState(selected?.title ?? "");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q
+      ? tasks.filter(
+          (t) =>
+            t.title.toLowerCase().includes(q) ||
+            t.project.name.toLowerCase().includes(q)
+        )
+      : tasks;
+  }, [query, tasks]);
+
+  function openDropdown() {
+    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+    setOpen(true);
+  }
+
+  function select(id: string, title: string) {
+    onChange(id);
+    setQuery(title);
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (
+        inputRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) return;
+      setQuery(selected?.title ?? "");
+      setOpen(false);
+    }
+    if (open) document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open, selected]);
+
+  const dropdown = open && rect
+    ? createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: "fixed",
+            top: rect.bottom + 4,
+            left: rect.left,
+            width: Math.max(rect.width, 240),
+            zIndex: 9999,
+          }}
+          className="max-h-56 overflow-y-auto rounded-md border border-border bg-popover shadow-md"
+        >
+          <button
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent"
+            onPointerDown={(e) => { e.preventDefault(); select("none", ""); }}
+          >
+            No task
+          </button>
+          {filtered.map((t) => (
+            <button
+              key={t.id}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-left",
+                value === t.id && "bg-accent/60"
+              )}
+              onPointerDown={(e) => { e.preventDefault(); select(t.id, t.title); }}
+            >
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: t.project.color }}
+              />
+              <span className="truncate">{t.title}</span>
+              <span className="text-xs text-muted-foreground ml-auto pl-2 truncate">{t.project.name}</span>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="px-3 py-2 text-sm text-muted-foreground">No matches</p>
+          )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className="w-48">
+      <Input
+        ref={inputRef}
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); openDropdown(); }}
+        onFocus={openDropdown}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { setQuery(selected?.title ?? ""); setOpen(false); }
+        }}
+        placeholder="No task"
+        className="h-7 text-sm"
+      />
+      {dropdown}
+    </div>
+  );
 }
 
 // --- Inline row editor ---
@@ -102,25 +211,7 @@ function EditableRow({
       </td>
       {/* Task */}
       <td className="px-4 py-2">
-        <Select value={taskId} onValueChange={setTaskId}>
-          <SelectTrigger className="h-7 text-sm w-48">
-            <SelectValue placeholder="No task" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No task</SelectItem>
-            {tasks.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: t.project.color }}
-                  />
-                  {t.title}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
       </td>
       {/* Note */}
       <td className="px-4 py-2">
@@ -222,25 +313,7 @@ function NewLogRow({
         />
       </td>
       <td className="px-4 py-2">
-        <Select value={taskId} onValueChange={setTaskId}>
-          <SelectTrigger className="h-7 text-sm w-48">
-            <SelectValue placeholder="No task" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No task</SelectItem>
-            {tasks.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: t.project.color }}
-                  />
-                  {t.title}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
       </td>
       <td className="px-4 py-2">
         <Input
