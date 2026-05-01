@@ -13,6 +13,7 @@ import {
   Check,
   X,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -431,7 +432,14 @@ export default function WorkLogsPage() {
         </div>
 
         {/* Date navigation */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="w-28 flex items-center gap-1.5 text-sm text-muted-foreground">
+            {isLoading && <>
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+              Loading…
+            </>}
+          </div>
+          <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goPrev}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -444,11 +452,10 @@ export default function WorkLogsPage() {
           <Button variant="outline" size="sm" onClick={goNext}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          {!isToday(date) && (
-            <Button variant="ghost" size="sm" onClick={goToday}>
-              Today
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={goToday} disabled={isToday(date)}>
+            Today
+          </Button>
+          </div>
         </div>
 
         {/* spacer to keep date nav centered */}
@@ -476,14 +483,7 @@ export default function WorkLogsPage() {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={5} className="text-center py-10 text-muted-foreground text-sm">
-                  Loading...
-                </td>
-              </tr>
-            ) : (
-              logs.map((log) =>
+            {logs.map((log) =>
                 editingId === log.id ? (
                   <EditableRow
                     key={log.id}
@@ -555,7 +555,6 @@ export default function WorkLogsPage() {
                     </td>
                   </tr>
                 )
-              )
             )}
             <NewLogRow
               key={newRowKey}
