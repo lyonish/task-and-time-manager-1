@@ -2,10 +2,10 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Bell, Search, LogOut, User, Settings } from "lucide-react";
+import { Bell, LogOut, User, Settings } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { SearchDialog } from "./SearchDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -31,13 +31,7 @@ export function Header() {
     <header className="h-14 border-b border-sidebar-border bg-sidebar px-4 flex items-center justify-between">
       {/* Search */}
       <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks, projects..."
-            className="pl-10 bg-muted border-border"
-          />
-        </div>
+        <SearchDialog />
       </div>
 
       {/* Right Section */}

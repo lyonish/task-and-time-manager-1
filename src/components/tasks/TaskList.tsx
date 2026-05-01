@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TaskRow } from "./TaskRow";
 import { QuickAddTask } from "./QuickAddTask";
 import { TaskDetailPanel } from "./TaskDetailPanel";
@@ -154,6 +154,15 @@ export function TaskList({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [isCompact, setIsCompact] = useState(initialIsCompact);
   const [filters, setFilters] = useState<Filters>(initialFilters ?? DEFAULT_FILTERS);
+
+  // Open task detail panel if ?taskId= is in the URL (e.g. navigated from search)
+  useEffect(() => {
+    const taskId = new URLSearchParams(window.location.search).get("taskId");
+    if (!taskId) return;
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) { setSelectedTask(task); setDetailOpen(true); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount; tasks are stable server props
 
   const notifyChange = (next: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean; filters: Filters }) => {
     onConfigChange?.(next);
