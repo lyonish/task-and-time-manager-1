@@ -45,7 +45,7 @@ export default async function ProjectPage({
         name: "All Tasks",
         isDefault: true,
         position: 0,
-        config: { groupBy: "none", viewMode: "list", isCompact: false },
+        config: { groupBy: "none", viewMode: "list", isCompact: false, filters: { updatedWithinDays: 14, dueWithinNextDays: 14 } },
         createdBy: session.user.id,
       })
       .$returningId();

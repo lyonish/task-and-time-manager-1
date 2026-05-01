@@ -245,6 +245,10 @@ export const projectViews = mysqlTable(
         groupBy: "none" | "status" | "priority" | "assignee" | "layer";
         viewMode: "list" | "tree" | "kanban";
         isCompact: boolean;
+        filters: {
+          updatedWithinDays: number | null;
+          dueWithinNextDays: number | null;
+        };
       }>()
       .notNull(),
     createdBy: varchar("created_by", { length: 36 }).notNull(),

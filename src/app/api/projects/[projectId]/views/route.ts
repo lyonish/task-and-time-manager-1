@@ -5,7 +5,7 @@ import { projectViews, projects, workspaceMembers } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import type { ViewConfig } from "@/lib/db/schema";
 
-const DEFAULT_CONFIG: ViewConfig = { groupBy: "none", viewMode: "list", isCompact: false };
+const DEFAULT_CONFIG: ViewConfig = { groupBy: "none", viewMode: "list", isCompact: false, filters: { updatedWithinDays: 14, dueWithinNextDays: 14 } };
 
 import { and } from "drizzle-orm";
 
@@ -84,6 +84,10 @@ export async function POST(
       groupBy: body.config?.groupBy ?? "none",
       viewMode: body.config?.viewMode ?? "list",
       isCompact: body.config?.isCompact ?? false,
+      filters: {
+        updatedWithinDays: body.config?.filters?.updatedWithinDays ?? 14,
+        dueWithinNextDays: body.config?.filters?.dueWithinNextDays ?? 14,
+      },
     };
 
     const existing = await db

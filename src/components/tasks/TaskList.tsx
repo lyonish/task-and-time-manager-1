@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Layers, List, GitBranch, Minimize2, Maximize2, LayoutDashboard } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, List, GitBranch, Minimize2, Maximize2, LayoutDashboard, Plus, X } from "lucide-react";
 import { TaskTreeView } from "./TaskTreeView";
 import { KanbanBoard } from "./KanbanBoard";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ interface Task {
   parentTaskId: string | null;
   assigneeId: string | null;
   dueDate: Date | null;
+  updatedAt?: Date | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
   assignee?: {
     id: string;
@@ -63,6 +64,13 @@ interface Member {
   avatarUrl: string | null;
 }
 
+type Filters = {
+  updatedWithinDays: number | null;
+  dueWithinNextDays: number | null;
+};
+
+const DEFAULT_FILTERS: Filters = { updatedWithinDays: 14, dueWithinNextDays: 14 };
+
 interface TaskListProps {
   projectId: string;
   statuses: Status[];
@@ -73,11 +81,49 @@ interface TaskListProps {
   initialGroupBy?: GroupBy;
   initialViewMode?: ViewMode;
   initialIsCompact?: boolean;
-  onConfigChange?: (config: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean }) => void;
+  initialFilters?: Filters;
+  onConfigChange?: (config: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean; filters: Filters }) => void;
 }
 
 type GroupBy = "none" | "status" | "priority" | "assignee" | "layer";
 type ViewMode = "list" | "tree" | "kanban";
+
+// --- Filter chip ---
+function FilterChip({
+  label, prefix, suffix, value, onChange,
+}: {
+  label: string; prefix: string; suffix: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  if (value === null) {
+    return (
+      <button
+        onClick={() => onChange(14)}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground border border-dashed border-border rounded-full px-3 py-1 transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" />{label}
+      </button>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-sm bg-muted text-muted-foreground rounded-full px-3 py-1">
+      <span>{label}: {prefix}</span>
+      <input
+        type="number"
+        min={1}
+        max={365}
+        value={value}
+        onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
+        className="w-8 bg-transparent text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none"
+      />
+      <span>d</span>
+      <button onClick={() => onChange(null)}>
+        <X className="h-3.5 w-3.5 hover:text-foreground transition-colors" />
+      </button>
+    </span>
+  );
+}
 
 const priorityOrder = ["Urgent", "High", "Medium", "Low", "None"] as const;
 const priorityColors: Record<string, string> = {
@@ -98,6 +144,7 @@ interface Group {
 export function TaskList({
   projectId, statuses, layers, tasks, members, currentUserId,
   initialGroupBy = "none", initialViewMode = "list", initialIsCompact = false,
+  initialFilters = DEFAULT_FILTERS,
   onConfigChange,
 }: TaskListProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -106,10 +153,34 @@ export function TaskList({
   const [groupBy, setGroupBy] = useState<GroupBy>(initialGroupBy);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [isCompact, setIsCompact] = useState(initialIsCompact);
+  const [filters, setFilters] = useState<Filters>(initialFilters ?? DEFAULT_FILTERS);
 
-  const notifyChange = (next: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean }) => {
+  const notifyChange = (next: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean; filters: Filters }) => {
     onConfigChange?.(next);
   };
+
+  const updateFilter = (key: keyof Filters, value: number | null) => {
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    notifyChange({ groupBy, viewMode, isCompact, filters: next });
+  };
+
+  // Apply date filters
+  const filteredTasks = (() => {
+    const now = Date.now();
+    return tasks.filter((task) => {
+      if (filters.updatedWithinDays !== null && task.updatedAt) {
+        const cutoff = now - filters.updatedWithinDays * 86_400_000;
+        if (new Date(task.updatedAt).getTime() < cutoff) return false;
+      }
+      if (filters.dueWithinNextDays !== null) {
+        if (!task.dueDate) return false;
+        const cutoff = now + filters.dueWithinNextDays * 86_400_000;
+        if (new Date(task.dueDate).getTime() > cutoff) return false;
+      }
+      return true;
+    });
+  })();
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -130,7 +201,7 @@ export function TaskList({
 
   const getGroups = (): Group[] => {
     if (groupBy === "none") {
-      return [{ key: "all", label: "", color: null, tasks }];
+      return [{ key: "all", label: "", color: null, tasks: filteredTasks }];
     }
 
     if (groupBy === "status") {
@@ -138,9 +209,9 @@ export function TaskList({
         key: status.id,
         label: status.name,
         color: status.color,
-        tasks: tasks.filter((t) => t.statusId === status.id),
+        tasks: filteredTasks.filter((t) => t.statusId === status.id),
       }));
-      const noStatus = tasks.filter((t) => !t.statusId);
+      const noStatus = filteredTasks.filter((t) => !t.statusId);
       if (noStatus.length > 0) {
         groups.push({ key: "no-status", label: "No Status", color: "#9ca3af", tasks: noStatus });
       }
@@ -152,7 +223,7 @@ export function TaskList({
         key: priority,
         label: priority,
         color: priorityColors[priority],
-        tasks: tasks.filter((t) => t.priority === priority),
+        tasks: filteredTasks.filter((t) => t.priority === priority),
       }));
     }
 
@@ -161,9 +232,9 @@ export function TaskList({
         key: member.id,
         label: member.name,
         color: null,
-        tasks: tasks.filter((t) => t.assigneeId === member.id),
+        tasks: filteredTasks.filter((t) => t.assigneeId === member.id),
       }));
-      const unassigned = tasks.filter((t) => !t.assigneeId);
+      const unassigned = filteredTasks.filter((t) => !t.assigneeId);
       if (unassigned.length > 0) {
         groups.unshift({ key: "unassigned", label: "Unassigned", color: "#9ca3af", tasks: unassigned });
       }
@@ -175,16 +246,16 @@ export function TaskList({
         key: layer.id,
         label: layer.name,
         color: layer.color,
-        tasks: tasks.filter((t) => t.layerId === layer.id),
+        tasks: filteredTasks.filter((t) => t.layerId === layer.id),
       }));
-      const noLayer = tasks.filter((t) => !t.layerId);
+      const noLayer = filteredTasks.filter((t) => !t.layerId);
       if (noLayer.length > 0) {
         groups.push({ key: "no-layer", label: "No Layer", color: "#9ca3af", tasks: noLayer });
       }
       return groups;
     }
 
-    return [{ key: "all", label: "", color: null, tasks }];
+    return [{ key: "all", label: "", color: null, tasks: filteredTasks }];
   };
 
   const groups = getGroups();
@@ -209,7 +280,7 @@ export function TaskList({
                     const nextViewMode = v !== "layer" ? "list" : viewMode;
                     setGroupBy(nextGroupBy);
                     if (v !== "layer") setViewMode("list");
-                    notifyChange({ groupBy: nextGroupBy, viewMode: nextViewMode, isCompact });
+                    notifyChange({ groupBy: nextGroupBy, viewMode: nextViewMode, isCompact, filters });
                   }}
                 >
                   <SelectTrigger className="w-32 h-8">
@@ -238,7 +309,7 @@ export function TaskList({
                 onClick={() => {
                   const next = !isCompact;
                   setIsCompact(next);
-                  notifyChange({ groupBy, viewMode, isCompact: next });
+                  notifyChange({ groupBy, viewMode, isCompact: next, filters });
                 }}
                 title={isCompact ? "Normal view" : "Compact view"}
               >
@@ -257,7 +328,7 @@ export function TaskList({
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   className="h-7 px-2"
-                  onClick={() => { setViewMode("list"); notifyChange({ groupBy, viewMode: "list", isCompact }); }}
+                  onClick={() => { setViewMode("list"); notifyChange({ groupBy, viewMode: "list", isCompact, filters }); }}
                 >
                   <List className="h-4 w-4 mr-1" />
                   List
@@ -266,7 +337,7 @@ export function TaskList({
                   variant={viewMode === "tree" ? "secondary" : "ghost"}
                   size="sm"
                   className="h-7 px-2"
-                  onClick={() => { setViewMode("tree"); notifyChange({ groupBy, viewMode: "tree", isCompact }); }}
+                  onClick={() => { setViewMode("tree"); notifyChange({ groupBy, viewMode: "tree", isCompact, filters }); }}
                 >
                   <GitBranch className="h-4 w-4 mr-1" />
                   Tree
@@ -282,7 +353,7 @@ export function TaskList({
               onClick={() => {
                 const next: ViewMode = viewMode === "kanban" ? "list" : "kanban";
                 setViewMode(next);
-                notifyChange({ groupBy, viewMode: next, isCompact });
+                notifyChange({ groupBy, viewMode: next, isCompact, filters });
               }}
               title="Kanban view"
             >
@@ -292,17 +363,41 @@ export function TaskList({
           </div>
         </div>
 
+        {/* Filter Bar */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Filters:</span>
+          <FilterChip
+            label="Updated"
+            prefix="last"
+            suffix="d"
+            value={filters.updatedWithinDays}
+            onChange={(v) => updateFilter("updatedWithinDays", v)}
+          />
+          <FilterChip
+            label="Due"
+            prefix="next"
+            suffix="d"
+            value={filters.dueWithinNextDays}
+            onChange={(v) => updateFilter("dueWithinNextDays", v)}
+          />
+          {(filters.updatedWithinDays !== null || filters.dueWithinNextDays !== null) && (
+            <span className="text-xs text-muted-foreground">
+              — {filteredTasks.length} of {tasks.length} tasks
+            </span>
+          )}
+        </div>
+
         {/* Task View */}
         {viewMode === "kanban" ? (
           <KanbanBoard
             projectId={projectId}
             statuses={statuses}
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskClick={handleTaskClick}
           />
         ) : viewMode === "tree" ? (
           <TaskTreeView
-            tasks={tasks}
+            tasks={filteredTasks}
             layers={layers}
             onTaskClick={handleTaskClick}
             isCompact={isCompact}

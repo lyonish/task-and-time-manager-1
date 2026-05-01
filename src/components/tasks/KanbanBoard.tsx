@@ -29,6 +29,7 @@ interface Task {
   parentTaskId: string | null;
   assigneeId: string | null;
   dueDate: Date | null;
+  updatedAt?: Date | null;
   priority: "None" | "Low" | "Medium" | "High" | "Urgent";
   assignee?: { id: string; name: string; avatarUrl: string | null } | null;
   steps?: Step[];

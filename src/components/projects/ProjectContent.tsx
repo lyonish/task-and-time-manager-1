@@ -58,7 +58,12 @@ interface ProjectContentProps {
   initialViews: ProjectView[];
 }
 
-const DEFAULT_CONFIG: ViewConfig = { groupBy: "none", viewMode: "list", isCompact: false };
+const DEFAULT_CONFIG: ViewConfig = {
+  groupBy: "none",
+  viewMode: "list",
+  isCompact: false,
+  filters: { updatedWithinDays: 14, dueWithinNextDays: 14 },
+};
 
 export function ProjectContent({
   project, statuses, layers, tasks, members, currentUserId, initialViews,
@@ -321,6 +326,7 @@ export function ProjectContent({
           initialGroupBy={currentConfig.groupBy}
           initialViewMode={currentConfig.viewMode}
           initialIsCompact={currentConfig.isCompact}
+          initialFilters={currentConfig.filters}
           onConfigChange={handleConfigChange}
         />
         )}
