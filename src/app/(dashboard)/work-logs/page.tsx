@@ -461,7 +461,7 @@ function LogRow({
     {expanded && (
       <tr className={cn("border-b last:border-0", !log.startTime && !actStart && "bg-muted/10")}>
         <td colSpan={4} />
-        <td colSpan={2} className="pr-2 pb-3 pt-1">
+        <td colSpan={2} className="pr-2 py-2 align-middle">
           <textarea
             value={detailNote}
             onChange={(e) => setDetailNote(e.target.value)}
@@ -786,14 +786,14 @@ export default function WorkLogsPage() {
   return (
     <div className="p-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="relative flex items-center">
         <div>
           <h1 className="text-2xl font-bold">Schedule &amp; Log</h1>
           <p className="text-muted-foreground text-sm">Team schedule and activity records</p>
         </div>
 
-        {/* Date navigation */}
-        <div className="flex items-center gap-4">
+        {/* Date navigation — absolutely centered */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-4">
           <div className="w-28 flex items-center gap-1.5 text-sm text-muted-foreground">
             {(isLoading || isTeamLoading) && <><Loader2 className="h-4 w-4 animate-spin shrink-0" />Loading…</>}
           </div>
@@ -813,8 +813,6 @@ export default function WorkLogsPage() {
             </Button>
           </div>
         </div>
-
-        <div className="w-24" />
       </div>
 
       {/* View mode toggle + group selector */}
