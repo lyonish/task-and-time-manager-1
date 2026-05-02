@@ -148,7 +148,7 @@ function TaskCombobox({
       ? createPortal(
           <div
             ref={dropdownRef}
-            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 240), zIndex: 9999 }}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 360), zIndex: 9999 }}
             className="max-h-56 overflow-y-auto rounded-md border border-border bg-popover shadow-md"
           >
             <button
@@ -512,7 +512,7 @@ function LogRow({
         {log.task ? (
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: log.task.project.color }} />
-            <span className="text-sm truncate max-w-[180px]">{log.task.title}</span>
+            <span className="text-sm truncate max-w-[260px]">{log.task.title}</span>
             <span className="text-xs text-muted-foreground truncate">· {log.task.project.name}</span>
             {workspaceId && (
               <a
@@ -626,7 +626,7 @@ function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | 
           {log.task ? (
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: log.task.project.color }} />
-              <span className="text-sm truncate max-w-[180px]">{log.task.title}</span>
+              <span className="text-sm truncate max-w-[260px]">{log.task.title}</span>
               <span className="text-xs text-muted-foreground truncate">· {log.task.project.name}</span>
               {workspaceId && (
                 <a
@@ -686,11 +686,11 @@ function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | 
 function LogTableHeader() {
   return (
     <tr className="border-b bg-muted/50">
-      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">Est. Start</th>
-      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">Est. End</th>
-      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-28">Act. Start</th>
-      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">Act. End</th>
-      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Task</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-16">Est. Start</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-20">Est. End</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-24">Act. Start</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-28">Act. End</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide min-w-[220px]">Task</th>
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">Action</th>
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Note</th>
       <th className="w-20" />
