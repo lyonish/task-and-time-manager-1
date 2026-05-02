@@ -225,6 +225,12 @@ function EditableRow({
         <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
       </td>
       <td className="px-2 py-2">
+        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
+          <span>—</span>
+          <ChevronDown className="h-3 w-3 shrink-0" />
+        </button>
+      </td>
+      <td className="px-2 py-2">
         <Input value={note} onChange={(e) => setNote(e.target.value)} className="h-7 text-sm" placeholder="Add a note..." />
       </td>
       <td className="px-2 py-2">
@@ -299,6 +305,12 @@ function NewLogRow({ date, tasks, onSave }: { date: Date; tasks: TaskOption[]; o
       </td>
       <td className="px-2 py-2">
         <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
+      </td>
+      <td className="px-2 py-2">
+        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
+          <span>—</span>
+          <ChevronDown className="h-3 w-3 shrink-0" />
+        </button>
       </td>
       <td className="px-2 py-2">
         <Input
@@ -429,6 +441,13 @@ function LogRow({
           <span className="text-sm text-muted-foreground/30">—</span>
         )}
       </td>
+      {/* Action — placeholder */}
+      <td className="px-2 py-2">
+        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
+          <span>—</span>
+          <ChevronDown className="h-3 w-3 shrink-0" />
+        </button>
+      </td>
       {/* Note */}
       <td className="px-2 py-2">
         <span className={cn("text-sm", !log.note && "text-muted-foreground/30")}>
@@ -461,7 +480,7 @@ function LogRow({
     {expanded && (
       <tr className={cn("border-b last:border-0", !log.startTime && !actStart && "bg-muted/10")}>
         <td colSpan={4} />
-        <td colSpan={2} className="pr-2 py-2 align-middle">
+        <td colSpan={3} className="pr-2 py-2 align-middle">
           <textarea
             value={detailNote}
             onChange={(e) => setDetailNote(e.target.value)}
@@ -535,6 +554,13 @@ function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | 
             <span className="text-sm text-muted-foreground/30">—</span>
           )}
         </td>
+        {/* Action — placeholder */}
+        <td className="px-2 py-2">
+          <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
+            <span>—</span>
+            <ChevronDown className="h-3 w-3 shrink-0" />
+          </button>
+        </td>
         <td className="px-2 py-2">
           <span className={cn("text-sm", !log.note && "text-muted-foreground/30")}>{log.note || "—"}</span>
         </td>
@@ -553,7 +579,7 @@ function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | 
       {expanded && (
         <tr className="border-b last:border-0">
           <td colSpan={4} />
-          <td colSpan={2} className="pr-2 pb-3 pt-1">
+          <td colSpan={3} className="pr-2 pb-3 pt-1">
             <div className="w-full text-sm text-muted-foreground border border-border rounded-md px-3 py-2 bg-muted/20 whitespace-pre-wrap min-h-[60px]">
               {log.detailNote || <span className="text-muted-foreground/40 italic">No detail note</span>}
             </div>
@@ -574,6 +600,7 @@ function LogTableHeader() {
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-28">Act. Start</th>
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">Act. End</th>
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Task</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">Action</th>
       <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Note</th>
       <th className="w-20" />
     </tr>
@@ -909,7 +936,7 @@ export default function WorkLogsPage() {
                 <tbody>
                   {member.logs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground/50">
+                      <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted-foreground/50">
                         No schedule entries for this day
                       </td>
                     </tr>
