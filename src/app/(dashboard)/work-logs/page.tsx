@@ -16,6 +16,8 @@ import {
   Clock,
   Loader2,
   ExternalLink,
+  Users,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +37,18 @@ interface WorkLog {
   note: string | null;
   detailNote: string | null;
   task: (TaskOption & { projectId: string }) | null;
+}
+
+interface GroupInfo {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  members: { userId: string; user: { id: string; name: string; email: string; avatarUrl: string | null } }[];
+}
+
+interface TeamMember {
+  user: { id: string; name: string; avatarUrl: string | null };
+  logs: WorkLog[];
 }
 
 type SaveData = {
@@ -468,14 +482,197 @@ function LogRow({
   );
 }
 
+// --- Read-only row for team view ---
+function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <>
+      <tr className="border-b last:border-0 hover:bg-accent/40 group">
+        <td className="px-2 py-2"><TimeCell time={log.estimatedStartTime} dimmed /></td>
+        <td className="px-2 py-2">
+          <div className="flex items-center gap-1">
+            <TimeCell time={log.estimatedEndTime} dimmed />
+            {log.estimatedStartTime && log.estimatedEndTime && (
+              <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
+                <Clock className="h-2.5 w-2.5" />
+                {formatDuration(log.estimatedStartTime, log.estimatedEndTime)}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2"><TimeCell time={log.startTime} /></td>
+        <td className="px-2 py-2">
+          <div className="flex items-center gap-1.5">
+            <TimeCell time={log.endTime} />
+            {log.startTime && log.endTime && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 whitespace-nowrap">
+                <Clock className="h-2.5 w-2.5" />
+                {formatDuration(log.startTime, log.endTime)}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2">
+          {log.task ? (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: log.task.project.color }} />
+              <span className="text-sm truncate max-w-[180px]">{log.task.title}</span>
+              <span className="text-xs text-muted-foreground truncate">· {log.task.project.name}</span>
+              {workspaceId && (
+                <a
+                  href={`/workspace/${workspaceId}/project/${log.task.project.id}?taskId=${log.task.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                </a>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground/30">—</span>
+          )}
+        </td>
+        <td className="px-2 py-2">
+          <span className={cn("text-sm", !log.note && "text-muted-foreground/30")}>{log.note || "—"}</span>
+        </td>
+        <td className="px-2 py-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-muted-foreground"
+            onClick={() => setExpanded((v) => !v)}
+            title="Detail note"
+          >
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !expanded && "-rotate-90")} />
+          </Button>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-b last:border-0">
+          <td colSpan={4} />
+          <td colSpan={2} className="pr-2 pb-3 pt-1">
+            <div className="w-full text-sm text-muted-foreground border border-border rounded-md px-3 py-2 bg-muted/20 whitespace-pre-wrap min-h-[60px]">
+              {log.detailNote || <span className="text-muted-foreground/40 italic">No detail note</span>}
+            </div>
+          </td>
+          <td />
+        </tr>
+      )}
+    </>
+  );
+}
+
+// --- Log table header ---
+function LogTableHeader() {
+  return (
+    <tr className="border-b bg-muted/50">
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">Est. Start</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">Est. End</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-28">Act. Start</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">Act. End</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Task</th>
+      <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Note</th>
+      <th className="w-20" />
+    </tr>
+  );
+}
+
+// --- Group selector dropdown ---
+function GroupSelector({
+  groups,
+  selectedId,
+  onSelect,
+}: {
+  groups: GroupInfo[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const selected = groups.find((g) => g.id === selectedId);
+
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    if (open) document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  const dropdown =
+    open && rect
+      ? createPortal(
+          <div
+            ref={dropdownRef}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
+            className="rounded-md border border-border bg-popover shadow-md py-1"
+          >
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                className={cn("flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent text-left", g.id === selectedId && "bg-accent/60")}
+                onPointerDown={(e) => { e.preventDefault(); onSelect(g.id); setOpen(false); }}
+              >
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                {g.name}
+                <span className="ml-auto text-xs text-muted-foreground">{g.members.length} members</span>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent transition-colors"
+        onClick={() => {
+          if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+          setOpen((v) => !v);
+        }}
+      >
+        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+        <span>{selected?.name ?? "Select group"}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-0.5" />
+      </button>
+      {dropdown}
+    </>
+  );
+}
+
 export default function WorkLogsPage() {
   const [date, setDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
+
+  // Personal view
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [tasks, setTasks] = useState<TaskOption[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [newRowKey, setNewRowKey] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Team view
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [allGroups, setAllGroups] = useState<GroupInfo[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isTeamLoading, setIsTeamLoading] = useState(false);
+
+  // Groups the current user is a member of
+  const myGroups = useMemo(
+    () => allGroups.filter((g) => !g.isDefault && g.members.some((m) => m.userId === currentUserId)),
+    [allGroups, currentUserId]
+  );
 
   const fetchLogs = useCallback(async (d: Date) => {
     setIsLoading(true);
@@ -494,17 +691,50 @@ export default function WorkLogsPage() {
     if (res.ok) setTasks(await res.json());
   }, []);
 
+  const fetchTeamSchedule = useCallback(async (wsId: string, groupId: string, d: Date) => {
+    setIsTeamLoading(true);
+    try {
+      const dateStr = format(d, "yyyy-MM-dd");
+      const res = await fetch(`/api/workspaces/${wsId}/schedule?date=${dateStr}&groupId=${groupId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTeamMembers(data.members);
+      }
+    } finally {
+      setIsTeamLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((me: { id: string }) => setCurrentUserId(me.id));
+
     fetch("/api/workspaces")
       .then((r) => r.json())
       .then((ws: { id: string }[]) => {
         const id = ws[0]?.id ?? null;
         setWorkspaceId(id);
         fetchTasks(id);
+        if (id) {
+          fetch(`/api/workspaces/${id}/groups`)
+            .then((r) => r.json())
+            .then((groups: GroupInfo[]) => {
+              setAllGroups(groups);
+              const firstNonDefault = groups.find((g) => !g.isDefault);
+              if (firstNonDefault) setSelectedGroupId(firstNonDefault.id);
+            });
+        }
       });
   }, [fetchTasks]);
 
   useEffect(() => { fetchLogs(date); }, [date, fetchLogs]);
+
+  useEffect(() => {
+    if (viewMode === "team" && workspaceId && selectedGroupId) {
+      fetchTeamSchedule(workspaceId, selectedGroupId, date);
+    }
+  }, [viewMode, workspaceId, selectedGroupId, date, fetchTeamSchedule]);
 
   const goPrev = () => setDate((d) => subDays(d, 1));
   const goNext = () => setDate((d) => addDays(d, 1));
@@ -565,7 +795,7 @@ export default function WorkLogsPage() {
         {/* Date navigation */}
         <div className="flex items-center gap-4">
           <div className="w-28 flex items-center gap-1.5 text-sm text-muted-foreground">
-            {isLoading && <><Loader2 className="h-4 w-4 animate-spin shrink-0" />Loading…</>}
+            {(isLoading || isTeamLoading) && <><Loader2 className="h-4 w-4 animate-spin shrink-0" />Loading…</>}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={goPrev}>
@@ -587,58 +817,115 @@ export default function WorkLogsPage() {
         <div className="w-24" />
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">
-                Est. Start
-              </th>
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground/60 uppercase tracking-wide w-24">
-                Est. End
-              </th>
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-28">
-                Act. Start
-              </th>
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide w-32">
-                Act. End
-              </th>
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Task
-              </th>
-              <th className="text-left px-2 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Note
-              </th>
-              <th className="w-20" />
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) =>
-              editingId === log.id ? (
-                <EditableRow
-                  key={log.id}
-                  log={log}
-                  tasks={tasks}
-                  onSave={handleSave}
-                  onDelete={handleDelete}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <LogRow
-                  key={log.id}
-                  log={log}
-                  workspaceId={workspaceId}
-                  date={date}
-                  onEdit={() => setEditingId(log.id)}
-                  onPatch={handlePatch}
-                />
-              )
+      {/* View mode toggle + group selector */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center rounded-md border border-border p-0.5 bg-muted/30">
+          <button
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 text-sm rounded transition-colors",
+              viewMode === "personal" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
             )}
-            <NewLogRow key={newRowKey} date={date} tasks={tasks} onSave={handleCreate} />
-          </tbody>
-        </table>
+            onClick={() => setViewMode("personal")}
+          >
+            <User className="h-3.5 w-3.5" />
+            My Schedule
+          </button>
+          <button
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 text-sm rounded transition-colors",
+              viewMode === "team" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setViewMode("team")}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Team
+          </button>
+        </div>
+
+        {viewMode === "team" && myGroups.length > 0 && selectedGroupId && (
+          <GroupSelector
+            groups={myGroups}
+            selectedId={selectedGroupId}
+            onSelect={(id) => setSelectedGroupId(id)}
+          />
+        )}
       </div>
+
+      {/* Personal view */}
+      {viewMode === "personal" && (
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead><LogTableHeader /></thead>
+            <tbody>
+              {logs.map((log) =>
+                editingId === log.id ? (
+                  <EditableRow
+                    key={log.id}
+                    log={log}
+                    tasks={tasks}
+                    onSave={handleSave}
+                    onDelete={handleDelete}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <LogRow
+                    key={log.id}
+                    log={log}
+                    workspaceId={workspaceId}
+                    date={date}
+                    onEdit={() => setEditingId(log.id)}
+                    onPatch={handlePatch}
+                  />
+                )
+              )}
+              <NewLogRow key={newRowKey} date={date} tasks={tasks} onSave={handleCreate} />
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Team view */}
+      {viewMode === "team" && (
+        <div className="space-y-10">
+          {teamMembers.length === 0 && !isTeamLoading && (
+            <div className="text-center text-muted-foreground py-12">No members in this group</div>
+          )}
+          {teamMembers.map((member) => (
+            <div key={member.user.id} className="border rounded-lg overflow-hidden">
+              {/* Member header */}
+              <div className="flex items-center gap-2.5 px-3 py-2 bg-muted/40 border-b">
+                {member.user.avatarUrl ? (
+                  <img src={member.user.avatarUrl} alt={member.user.name} className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary">
+                    {member.user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-sm font-medium">{member.user.name}</span>
+                <span className="text-xs text-muted-foreground ml-1">
+                  {member.logs.length === 0 ? "No entries" : `${member.logs.length} ${member.logs.length === 1 ? "entry" : "entries"}`}
+                </span>
+              </div>
+              <table className="w-full">
+                <thead><LogTableHeader /></thead>
+                <tbody>
+                  {member.logs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground/50">
+                        No schedule entries for this day
+                      </td>
+                    </tr>
+                  ) : (
+                    member.logs.map((log) => (
+                      <TeamLogRow key={log.id} log={log} workspaceId={workspaceId} />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
