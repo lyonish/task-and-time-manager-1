@@ -520,6 +520,7 @@ export const workLogs = mysqlTable(
     endTime: timestamp("end_time"),
     note: text("note"),
     detailNote: text("detail_note"),
+    actionType: varchar("action_type", { length: 50 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },

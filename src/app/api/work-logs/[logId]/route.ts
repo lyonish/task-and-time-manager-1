@@ -11,6 +11,7 @@ const updateWorkLogSchema = z.object({
   endTime: z.string().datetime().nullable().optional(),
   note: z.string().nullable().optional(),
   detailNote: z.string().nullable().optional(),
+  actionType: z.string().max(50).nullable().optional(),
 });
 
 export async function PATCH(
@@ -52,6 +53,7 @@ export async function PATCH(
       endTime: toDate(parsed.data.endTime),
       note: parsed.data.note,
       detailNote: parsed.data.detailNote,
+      actionType: parsed.data.actionType,
     });
 
     return NextResponse.json(log);

@@ -36,8 +36,21 @@ interface WorkLog {
   endTime: string | null;
   note: string | null;
   detailNote: string | null;
+  actionType: string | null;
   task: (TaskOption & { projectId: string }) | null;
 }
+
+const ACTION_TYPES = [
+  "Planning",
+  "Research",
+  "Design",
+  "Coding",
+  "Review",
+  "Meeting",
+  "Documentation",
+  "Education",
+  "Support",
+] as const;
 
 interface GroupInfo {
   id: string;
@@ -58,6 +71,7 @@ type SaveData = {
   startTime: string | null;
   endTime: string | null;
   note: string | null;
+  actionType: string | null;
 };
 
 function formatTime(dt: string | null) {
@@ -176,6 +190,83 @@ function TaskCombobox({
   );
 }
 
+// --- Action type selector ---
+function ActionSelector({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const selected = ACTION_TYPES.find((a) => a === value) ?? null;
+
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    if (open) document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  const dropdown =
+    open && rect
+      ? createPortal(
+          <div
+            ref={dropdownRef}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: 140, zIndex: 9999 }}
+            className="rounded-md border border-border bg-popover shadow-md py-1"
+          >
+            {value && (
+              <button
+                className="flex w-full items-center px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+                onPointerDown={(e) => { e.preventDefault(); onChange(null); setOpen(false); }}
+              >
+                Clear
+              </button>
+            )}
+            {ACTION_TYPES.map((a) => (
+              <button
+                key={a}
+                className={cn("flex w-full items-center px-3 py-1.5 text-xs hover:bg-accent", value === a && "bg-accent/60")}
+                onPointerDown={(e) => { e.preventDefault(); onChange(a); setOpen(false); }}
+              >
+                {a}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        className={cn(
+          "flex items-center justify-between gap-1 px-2 h-7 text-xs rounded border w-full",
+          selected
+            ? "border-border font-medium text-foreground"
+            : "border-border text-muted-foreground/50 hover:border-border/80"
+        )}
+        onClick={() => {
+          if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+          setOpen((v) => !v);
+        }}
+      >
+        <span>{selected ?? "—"}</span>
+        <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+      </button>
+      {dropdown}
+    </>
+  );
+}
+
 // --- Inline row editor ---
 function EditableRow({
   log,
@@ -197,6 +288,7 @@ function EditableRow({
   const [actStart, setActStart] = useState(log.startTime ? format(new Date(log.startTime), "HH:mm") : "");
   const [actEnd, setActEnd] = useState(log.endTime ? format(new Date(log.endTime), "HH:mm") : "");
   const [taskId, setTaskId] = useState(log.taskId ?? "none");
+  const [actionType, setActionType] = useState<string | null>(log.actionType ?? null);
   const [note, setNote] = useState(log.note ?? "");
 
   function buildDatetime(timeStr: string): string | null {
@@ -225,10 +317,7 @@ function EditableRow({
         <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
       </td>
       <td className="px-2 py-2">
-        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
-          <span>—</span>
-          <ChevronDown className="h-3 w-3 shrink-0" />
-        </button>
+        <ActionSelector value={actionType} onChange={setActionType} />
       </td>
       <td className="px-2 py-2">
         <Input value={note} onChange={(e) => setNote(e.target.value)} className="h-7 text-sm" placeholder="Add a note..." />
@@ -244,6 +333,7 @@ function EditableRow({
               startTime: buildDatetime(actStart),
               endTime: buildDatetime(actEnd),
               note: note || null,
+              actionType,
             })}
           >
             <Check className="h-3.5 w-3.5" />
@@ -267,6 +357,7 @@ function NewLogRow({ date, tasks, onSave }: { date: Date; tasks: TaskOption[]; o
   const [actStart, setActStart] = useState("");
   const [actEnd, setActEnd] = useState("");
   const [taskId, setTaskId] = useState("none");
+  const [actionType, setActionType] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
   function buildDatetime(timeStr: string): string | null {
@@ -286,6 +377,7 @@ function NewLogRow({ date, tasks, onSave }: { date: Date; tasks: TaskOption[]; o
       endTime: buildDatetime(actEnd),
       taskId: taskId === "none" ? null : taskId,
       note: note || null,
+      actionType,
     });
   }
 
@@ -307,10 +399,7 @@ function NewLogRow({ date, tasks, onSave }: { date: Date; tasks: TaskOption[]; o
         <TaskCombobox tasks={tasks} value={taskId} onChange={setTaskId} />
       </td>
       <td className="px-2 py-2">
-        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
-          <span>—</span>
-          <ChevronDown className="h-3 w-3 shrink-0" />
-        </button>
+        <ActionSelector value={actionType} onChange={setActionType} />
       </td>
       <td className="px-2 py-2">
         <Input
@@ -441,12 +530,13 @@ function LogRow({
           <span className="text-sm text-muted-foreground/30">—</span>
         )}
       </td>
-      {/* Action — placeholder */}
+      {/* Action — read-only; edit via pencil */}
       <td className="px-2 py-2">
-        <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
-          <span>—</span>
-          <ChevronDown className="h-3 w-3 shrink-0" />
-        </button>
+        {log.actionType ? (
+          <span className="text-xs font-medium text-foreground">{log.actionType}</span>
+        ) : (
+          <span className="text-muted-foreground/30 text-sm">—</span>
+        )}
       </td>
       {/* Note */}
       <td className="px-2 py-2">
@@ -554,12 +644,13 @@ function TeamLogRow({ log, workspaceId }: { log: WorkLog; workspaceId: string | 
             <span className="text-sm text-muted-foreground/30">—</span>
           )}
         </td>
-        {/* Action — placeholder */}
+        {/* Action — read-only */}
         <td className="px-2 py-2">
-          <button disabled className="flex items-center gap-1 px-2 h-7 text-xs rounded border border-dashed border-border text-muted-foreground/40 w-full justify-between cursor-not-allowed">
-            <span>—</span>
-            <ChevronDown className="h-3 w-3 shrink-0" />
-          </button>
+          {log.actionType ? (
+            <span className="text-xs font-medium text-foreground">{log.actionType}</span>
+          ) : (
+            <span className="text-muted-foreground/30 text-xs">—</span>
+          )}
         </td>
         <td className="px-2 py-2">
           <span className={cn("text-sm", !log.note && "text-muted-foreground/30")}>{log.note || "—"}</span>
