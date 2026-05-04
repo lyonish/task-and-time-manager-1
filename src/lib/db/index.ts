@@ -7,6 +7,7 @@ const poolConnection = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  charset: "utf8mb4_0900_ai_ci",
 });
 
 export const db = drizzle(poolConnection, { schema, mode: "default" });

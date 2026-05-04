@@ -45,6 +45,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   userGroupMemberships: many(userGroupMembers),
   reviewCommentsAuthored: many(workLogReviewComments, { relationName: "review_comment_author" }),
   reviewCommentsReceived: many(workLogReviewComments, { relationName: "reviewee_comments" }),
+  capacities: many(userCapacity),
+  plannedAssignmentsAsAssignee: many(plannedAssignments, { relationName: "pa_assignee" }),
+  plannedAssignmentsAsCreator: many(plannedAssignments, { relationName: "pa_creator" }),
 }));
 
 // =============================================
@@ -633,6 +636,88 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
+// =============================================
+// USER CAPACITY
+// =============================================
+export const userCapacity = mysqlTable(
+  "user_capacity",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    workspaceId: varchar("workspace_id", { length: 36 }).notNull(),
+    hoursPerDay: decimal("hours_per_day", { precision: 4, scale: 1 })
+      .notNull()
+      .default("8.0"),
+    daysPerWeek: int("days_per_week").notNull().default(5),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    uniqueIndex("unique_user_capacity").on(table.userId, table.workspaceId),
+  ]
+);
+
+export const userCapacityRelations = relations(userCapacity, ({ one }) => ({
+  user: one(users, {
+    fields: [userCapacity.userId],
+    references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [userCapacity.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+// =============================================
+// PLANNED ASSIGNMENTS
+// =============================================
+export const plannedAssignments = mysqlTable(
+  "planned_assignments",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    workspaceId: varchar("workspace_id", { length: 36 }).notNull(),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    projectId: varchar("project_id", { length: 36 }),
+    title: varchar("title", { length: 255 }).notNull(),
+    startDate: varchar("start_date", { length: 10 }).notNull(),
+    endDate: varchar("end_date", { length: 10 }).notNull(),
+    estimatedHours: decimal("estimated_hours", { precision: 6, scale: 2 }).notNull(),
+    note: text("note"),
+    createdBy: varchar("created_by", { length: 36 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index("idx_pa_workspace_date").on(table.workspaceId, table.startDate, table.endDate),
+    index("idx_pa_user").on(table.userId),
+  ]
+);
+
+export const plannedAssignmentsRelations = relations(plannedAssignments, ({ one }) => ({
+  assignee: one(users, {
+    fields: [plannedAssignments.userId],
+    references: [users.id],
+    relationName: "pa_assignee",
+  }),
+  creator: one(users, {
+    fields: [plannedAssignments.createdBy],
+    references: [users.id],
+    relationName: "pa_creator",
+  }),
+  workspace: one(workspaces, {
+    fields: [plannedAssignments.workspaceId],
+    references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [plannedAssignments.projectId],
+    references: [projects.id],
+  }),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -670,3 +755,5 @@ export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type ProjectRole = "Owner" | "Editor" | "Viewer";
 export type WorkLogReviewComment = typeof workLogReviewComments.$inferSelect;
 export type NewWorkLogReviewComment = typeof workLogReviewComments.$inferInsert;
+export type UserCapacity = typeof userCapacity.$inferSelect;
+export type PlannedAssignment = typeof plannedAssignments.$inferSelect;

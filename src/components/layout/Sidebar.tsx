@@ -13,6 +13,7 @@ import {
   ClipboardList,
   BarChart2,
   CalendarDays,
+  CalendarRange,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,11 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       label: "Schedule Review",
       href: "/schedule-stats",
       icon: CalendarDays,
+    },
+    {
+      label: "Planning",
+      href: workspaceId ? `/workspace/${workspaceId}/planning` : "/",
+      icon: CalendarRange,
     },
     {
       label: t.nav.statistics,
