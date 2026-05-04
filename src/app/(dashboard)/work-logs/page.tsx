@@ -768,7 +768,13 @@ function GroupSelector({
 }
 
 export default function WorkLogsPage() {
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => {
+    if (typeof window !== "undefined") {
+      const d = new URLSearchParams(window.location.search).get("date");
+      if (d) { const parsed = new Date(d); if (!isNaN(parsed.getTime())) return parsed; }
+    }
+    return new Date();
+  });
   const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
 
   // Personal view

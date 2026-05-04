@@ -23,6 +23,7 @@ interface GroupMember {
   id: string;
   groupId: string;
   userId: string;
+  role: "Leader" | "Member";
   user: { id: string; name: string; email: string; avatarUrl: string | null };
 }
 
@@ -144,6 +145,26 @@ export default function GroupsSettingsPage() {
     }
   };
 
+  const setMemberRole = async (groupId: string, userId: string, role: "Leader" | "Member") => {
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/groups/${groupId}/members`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId
+            ? { ...g, members: g.members.map((m) => m.userId === userId ? { ...m, role } : m) }
+            : g
+        )
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update role");
+    }
+  };
+
   const removeMember = async (group: Group, userId: string) => {
     try {
       const res = await fetch(
@@ -238,13 +259,37 @@ export default function GroupsSettingsPage() {
                         <p className="text-sm font-medium truncate">{m.user.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{m.user.email}</p>
                       </div>
-                      {canEdit && !group.isDefault && (
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
-                          onClick={() => removeMember(group, m.userId)}
+                      {!group.isDefault && (
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded-full border font-medium",
+                            m.role === "Leader"
+                              ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                              : "bg-muted text-muted-foreground border-transparent"
+                          )}
                         >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
+                          {m.role === "Leader" ? "Leader" : "Member"}
+                        </span>
+                      )}
+                      {canEdit && !group.isDefault && (
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs px-2"
+                            onClick={() =>
+                              setMemberRole(group.id, m.userId, m.role === "Leader" ? "Member" : "Leader")
+                            }
+                          >
+                            {m.role === "Leader" ? "Demote" : "Make Leader"}
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                            onClick={() => removeMember(group, m.userId)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))}

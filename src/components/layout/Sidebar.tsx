@@ -58,7 +58,7 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       icon: ClipboardList,
     },
     {
-      label: "Schedule Stats",
+      label: "Schedule Review",
       href: "/schedule-stats",
       icon: CalendarDays,
     },

@@ -11,9 +11,10 @@ import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Cell,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, ArrowLeft, MessageCircle,
-  Pencil, Trash2, Check, X, Loader2, ChevronDown, Users, User,
+  Pencil, Trash2, Check, X, Loader2, ChevronDown, Users, User, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createPortal } from "react-dom";
@@ -82,6 +83,16 @@ interface GroupInfo {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function truncateSVGLabel(text: string, maxPx = 78): string {
+  // CJK characters are roughly full-width (~11px), Latin ~6.5px at font-size 11
+  let width = 0;
+  for (let i = 0; i < text.length; i++) {
+    width += text.charCodeAt(i) > 0x2e7f ? 11 : 6.5;
+    if (width > maxPx - 9) return text.slice(0, i) + "…"; // 9px reserved for "…"
+  }
+  return text;
+}
 
 function fmtMins(m: number): string {
   const h = Math.floor(m / 60);
@@ -182,9 +193,16 @@ function HBarChart({ items }: { items: BarItem[] }) {
           type="category"
           dataKey="label"
           width={88}
-          tick={{ fontSize: 11, fill: "#6b7280" }}
           axisLine={false}
           tickLine={false}
+          tick={(props) => {
+            const { y, payload } = props as { y: number; payload: { value: string } };
+            return (
+              <text x={4} y={y} dy={4} textAnchor="start" fontSize={11} fill="#6b7280">
+                {truncateSVGLabel(payload.value)}
+              </text>
+            );
+          }}
         />
         <XAxis type="number" hide domain={[0, maxMins * 1.15]} />
         <Bar dataKey="minutes" radius={[0, 3, 3, 0]} barSize={14}>
@@ -209,10 +227,12 @@ function PeriodCol({
   label,
   stats,
   loading,
+  periodStart,
 }: {
   label: string;
   stats: PersonalStats | null;
   loading: boolean;
+  periodStart: Date;
 }) {
   const projectItems: BarItem[] = (stats?.byProject ?? []).map((p) => ({
     label: p.projectName.length > 14 ? p.projectName.slice(0, 13) + "…" : p.projectName,
@@ -230,12 +250,22 @@ function PeriodCol({
 
   return (
     <div className="flex-1 min-w-0 border rounded-lg p-4 bg-card">
-      <div className="flex items-baseline justify-between mb-3">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate mr-2">
-          {label}
-        </span>
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="min-w-0">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide block truncate">
+            {label}
+          </span>
+          <Link
+            href={`/work-logs?date=${format(periodStart, "yyyy-MM-dd")}`}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5 ml-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="w-3 h-3" />
+            Schedule &amp; Log
+          </Link>
+        </div>
         {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0 mt-1" />
         ) : (
           <span className="text-2xl font-bold shrink-0">
             {stats ? fmtMins(stats.totalMinutes) : "–"}
@@ -426,9 +456,19 @@ function CommentThread({
 
 // ─── Matrix table ─────────────────────────────────────────────────────────────
 
+interface FlatRow {
+  taskId: string | null;
+  taskTitle: string;
+  projectId: string | null;
+  projectName: string;
+  projectColor: string;
+  actionType: string | null;
+  minutes: number;
+}
+
 function MatrixTable({
   rows,
-  actionTypes,
+  actionTypes: _actionTypes,
   comments,
   revieweeId,
   periodType,
@@ -449,6 +489,27 @@ function MatrixTable({
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  // Flatten: one row per (task, action) combination
+  const flatRows = useMemo<FlatRow[]>(() => {
+    const result: FlatRow[] = [];
+    for (const r of rows) {
+      const entries = Object.entries(r.byAction).filter(([, mins]) => mins > 0);
+      if (entries.length === 0) continue;
+      for (const [actionKey, minutes] of entries) {
+        result.push({
+          taskId: r.taskId,
+          taskTitle: r.taskTitle,
+          projectId: r.projectId,
+          projectName: r.projectName,
+          projectColor: r.projectColor,
+          actionType: actionKey === "__none__" ? null : actionKey,
+          minutes,
+        });
+      }
+    }
+    return result;
+  }, [rows]);
+
   const commentedTaskIds = useMemo(
     () => new Set(comments.filter((c) => c.taskId != null).map((c) => c.taskId!)),
     [comments]
@@ -458,19 +519,16 @@ function MatrixTable({
     [comments]
   );
 
-  const hasNone = rows.some((r) => (r.byAction["__none__"] ?? 0) > 0);
-  const columns = [...actionTypes, ...(hasNone ? ["__none__"] : [])];
-
-  function rowKey(r: MatrixRow) {
-    return r.taskId ?? "__notask__";
+  function taskKey(taskId: string | null) {
+    return taskId ?? "__notask__";
   }
 
-  function isCommented(r: MatrixRow) {
-    return r.taskId ? commentedTaskIds.has(r.taskId) : commentedNullTask;
+  function isCommented(taskId: string | null) {
+    return taskId ? commentedTaskIds.has(taskId) : commentedNullTask;
   }
 
-  function rowComments(r: MatrixRow) {
-    return comments.filter((c) => c.taskId === r.taskId);
+  function taskComments(taskId: string | null) {
+    return comments.filter((c) => c.taskId === taskId);
   }
 
   function toggle(key: string) {
@@ -482,7 +540,10 @@ function MatrixTable({
     });
   }
 
-  if (rows.length === 0) {
+  // Track which task IDs have already rendered their expand row
+  const expandedRendered = new Set<string>();
+
+  if (flatRows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
         No work logged this period.
@@ -495,33 +556,46 @@ function MatrixTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-muted/50 border-b">
-            <th className="text-left px-3 py-2 font-semibold text-muted-foreground w-[200px]">
-              Task
-            </th>
-            <th className="text-left px-3 py-2 font-semibold text-muted-foreground w-[130px]">
-              Project
-            </th>
-            {columns.map((col) => (
-              <th
-                key={col}
-                className="text-right px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap"
-              >
-                {col === "__none__" ? "—" : col}
-              </th>
-            ))}
+            <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Task</th>
+            <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Project</th>
+            <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Action</th>
             <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Total</th>
             <th className="w-10" />
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const key = rowKey(row);
+          {flatRows.map((row, idx) => {
+            const key = taskKey(row.taskId);
             const isExpanded = expanded.has(key);
-            const commented = isCommented(row);
-            const rc = rowComments(row);
+            const commented = isCommented(row.taskId);
+            const isLastForTask =
+              idx === flatRows.length - 1 ||
+              flatRows[idx + 1].taskId !== row.taskId;
+
+            // Render the expand row once, after the last action row for this task
+            let expandRow: React.ReactNode = null;
+            if (isExpanded && isLastForTask && !expandedRendered.has(key)) {
+              expandedRendered.add(key);
+              expandRow = (
+                <tr key={`${key}-thread`}>
+                  <td colSpan={5} className="p-0">
+                    <CommentThread
+                      comments={taskComments(row.taskId)}
+                      revieweeId={revieweeId}
+                      periodType={periodType}
+                      periodStart={periodStart}
+                      periodEnd={periodEnd}
+                      taskId={row.taskId}
+                      currentUserId={currentUserId}
+                      onRefresh={onRefresh}
+                    />
+                  </td>
+                </tr>
+              );
+            }
 
             return (
-              <React.Fragment key={key}>
+              <React.Fragment key={`${key}-${row.actionType ?? "__none__"}-${idx}`}>
                 <tr
                   className={cn(
                     "border-b hover:bg-muted/30 cursor-pointer transition-colors",
@@ -530,58 +604,42 @@ function MatrixTable({
                   onClick={() => toggle(key)}
                 >
                   <td className="px-3 py-2 font-medium">
-                    <span className="block truncate max-w-[190px]">{row.taskTitle}</span>
+                    <span className="block truncate max-w-[180px]">{row.taskTitle}</span>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 max-w-[120px]">
+                    <div className="flex items-center gap-1.5">
                       <div
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: row.projectColor }}
                       />
-                      <span className="truncate text-muted-foreground">{row.projectName}</span>
+                      <span className="truncate text-muted-foreground max-w-[100px]">
+                        {row.projectName}
+                      </span>
                     </div>
                   </td>
-                  {columns.map((col) => {
-                    const mins = row.byAction[col] ?? 0;
-                    return (
-                      <td key={col} className="px-3 py-2 text-right tabular-nums">
-                        {mins > 0 ? fmtMins(mins) : <span className="text-muted-foreground/40">–</span>}
-                      </td>
-                    );
-                  })}
-                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    {fmtMins(row.totalMinutes)}
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {row.actionType ?? <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums font-medium">
+                    {fmtMins(row.minutes)}
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-1">
-                      {commented && (
-                        <MessageCircle className="w-3 h-3 text-red-500 shrink-0" />
-                      )}
-                      <ChevronDown
-                        className={cn(
-                          "w-3 h-3 text-muted-foreground transition-transform shrink-0",
-                          isExpanded && "rotate-180"
+                    {isLastForTask && (
+                      <div className="flex items-center justify-end gap-1">
+                        {commented && (
+                          <MessageCircle className="w-3 h-3 text-red-500 shrink-0" />
                         )}
-                      />
-                    </div>
+                        <ChevronDown
+                          className={cn(
+                            "w-3 h-3 text-muted-foreground transition-transform shrink-0",
+                            isExpanded && "rotate-180"
+                          )}
+                        />
+                      </div>
+                    )}
                   </td>
                 </tr>
-                {isExpanded && (
-                  <tr>
-                    <td colSpan={columns.length + 4} className="p-0">
-                      <CommentThread
-                        comments={rc}
-                        revieweeId={revieweeId}
-                        periodType={periodType}
-                        periodStart={periodStart}
-                        periodEnd={periodEnd}
-                        taskId={row.taskId}
-                        currentUserId={currentUserId}
-                        onRefresh={onRefresh}
-                      />
-                    </td>
-                  </tr>
-                )}
+                {expandRow}
               </React.Fragment>
             );
           })}
@@ -786,9 +844,12 @@ function ScheduleStatsContent() {
 
   const [currStats, setCurrStats] = useState<PersonalStats | null>(null);
   const [prevStats, setPrevStats] = useState<PersonalStats | null>(null);
-  const [matrix, setMatrix] = useState<MatrixRow[]>([]);
-  const [actionTypes, setActionTypes] = useState<string[]>([]);
-  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [currMatrix, setCurrMatrix] = useState<MatrixRow[]>([]);
+  const [currActionTypes, setCurrActionTypes] = useState<string[]>([]);
+  const [currComments, setCurrComments] = useState<CommentRow[]>([]);
+  const [prevMatrix, setPrevMatrix] = useState<MatrixRow[]>([]);
+  const [prevActionTypes, setPrevActionTypes] = useState<string[]>([]);
+  const [prevComments, setPrevComments] = useState<CommentRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
   const isViewingOther =
@@ -874,43 +935,51 @@ function ScheduleStatsContent() {
 
       setCurrStats(curr.stats ?? null);
       setPrevStats(prev.stats ?? null);
-      setMatrix(curr.matrix ?? []);
-      setActionTypes(curr.actionTypes ?? []);
+      setCurrMatrix(curr.matrix ?? []);
+      setCurrActionTypes(curr.actionTypes ?? []);
+      setPrevMatrix(prev.matrix ?? []);
+      setPrevActionTypes(prev.actionTypes ?? []);
     } finally {
       setStatsLoading(false);
     }
   }, [targetUserId, targetUserIdParam, currentUserId, pivot, periodType]);
 
-  // Fetch comments for current period
-  const fetchComments = useCallback(async () => {
+  // Fetch comments for both periods
+  const fetchAllComments = useCallback(async () => {
     if (!targetUserId) return;
-    const params = new URLSearchParams({
-      revieweeId: targetUserId,
-      periodType,
-      periodStart: currStart.toISOString(),
-      periodEnd: currEnd.toISOString(),
-    });
-    const res = await fetch(`/api/review-comments?${params}`);
-    if (res.ok) setComments(await res.json());
-  }, [targetUserId, periodType, currStart, currEnd]);
+    const makeParams = (start: Date, end: Date) =>
+      new URLSearchParams({
+        revieweeId: targetUserId,
+        periodType,
+        periodStart: start.toISOString(),
+        periodEnd: end.toISOString(),
+      }).toString();
+
+    const [currRes, prevRes] = await Promise.all([
+      fetch(`/api/review-comments?${makeParams(currStart, currEnd)}`),
+      fetch(`/api/review-comments?${makeParams(prevStart, prevEnd)}`),
+    ]);
+    if (currRes.ok) setCurrComments(await currRes.json());
+    if (prevRes.ok) setPrevComments(await prevRes.json());
+  }, [targetUserId, periodType, currStart, currEnd, prevStart, prevEnd]);
 
   useEffect(() => {
     if (targetUserId) fetchStats();
   }, [fetchStats]);
 
   useEffect(() => {
-    if (targetUserId) fetchComments();
-  }, [fetchComments]);
+    if (targetUserId) fetchAllComments();
+  }, [fetchAllComments]);
 
   const currLabel = formatPeriodLabel(currStart, currEnd, periodType);
   const prevLabel = formatPeriodLabel(prevStart, prevEnd, periodType);
 
   const pageTitle = isViewingOther
-    ? `${targetUserName || "Member"}'s Stats`
-    : "Schedule Stats";
+    ? `${targetUserName || "Member"}'s Review`
+    : "Schedule Review";
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         {isViewingOther && (
@@ -1008,37 +1077,55 @@ function ScheduleStatsContent() {
 
       {/* My stats / member stats */}
       {(isViewingOther || activeTab === "mine") && (
-        <>
-          {/* Two-column period comparison */}
-          <div className="flex gap-4 mb-6">
-            <PeriodCol label={prevLabel} stats={prevStats} loading={statsLoading} />
-            <PeriodCol label={currLabel} stats={currStats} loading={statsLoading} />
+        <div className="grid grid-cols-2 gap-6">
+          {/* Previous period */}
+          <div className="min-w-0">
+            <PeriodCol label={prevLabel} stats={prevStats} loading={statsLoading} periodStart={prevStart} />
+            <div className="mt-4">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <MatrixTable
+                  rows={prevMatrix}
+                  actionTypes={prevActionTypes}
+                  comments={prevComments}
+                  revieweeId={targetUserId}
+                  periodType={periodType}
+                  periodStart={prevStart.toISOString()}
+                  periodEnd={prevEnd.toISOString()}
+                  currentUserId={currentUserId}
+                  onRefresh={fetchAllComments}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Matrix */}
-          <div>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Work Log — {currLabel}
-            </h2>
-            {statsLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <MatrixTable
-                rows={matrix}
-                actionTypes={actionTypes}
-                comments={comments}
-                revieweeId={targetUserId}
-                periodType={periodType}
-                periodStart={currStart.toISOString()}
-                periodEnd={currEnd.toISOString()}
-                currentUserId={currentUserId}
-                onRefresh={fetchComments}
-              />
-            )}
+          {/* Current period */}
+          <div className="min-w-0">
+            <PeriodCol label={currLabel} stats={currStats} loading={statsLoading} periodStart={currStart} />
+            <div className="mt-4">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <MatrixTable
+                  rows={currMatrix}
+                  actionTypes={currActionTypes}
+                  comments={currComments}
+                  revieweeId={targetUserId}
+                  periodType={periodType}
+                  periodStart={currStart.toISOString()}
+                  periodEnd={currEnd.toISOString()}
+                  currentUserId={currentUserId}
+                  onRefresh={fetchAllComments}
+                />
+              )}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

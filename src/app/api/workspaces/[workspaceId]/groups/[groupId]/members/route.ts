@@ -45,6 +45,35 @@ export async function POST(
   }
 }
 
+// PATCH /api/workspaces/[workspaceId]/groups/[groupId]/members — set role
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ workspaceId: string; groupId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { workspaceId, groupId } = await params;
+    const wsRole = await WorkspaceService.getMemberRole(workspaceId, session.user.id);
+    if (!wsRole || wsRole === "Member" || wsRole === "Guest")
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const { userId, role } = await req.json() as { userId: string; role: "Leader" | "Member" };
+    if (!userId || !["Leader", "Member"].includes(role))
+      return NextResponse.json({ error: "userId and role (Leader|Member) required" }, { status: 400 });
+
+    await db
+      .update(userGroupMembers)
+      .set({ role })
+      .where(and(eq(userGroupMembers.groupId, groupId), eq(userGroupMembers.userId, userId)));
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 // DELETE /api/workspaces/[workspaceId]/groups/[groupId]/members?userId=xxx
 export async function DELETE(
   req: NextRequest,
