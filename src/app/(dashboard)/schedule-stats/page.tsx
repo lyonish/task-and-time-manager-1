@@ -1077,11 +1077,16 @@ function ScheduleStatsContent() {
 
       {/* My stats / member stats */}
       {(isViewingOther || activeTab === "mine") && (
-        <div className="grid grid-cols-2 gap-6">
-          {/* Previous period */}
-          <div className="min-w-0">
+        <div className="space-y-4">
+          {/* Charts row */}
+          <div className="grid grid-cols-2 gap-6">
             <PeriodCol label={prevLabel} stats={prevStats} loading={statsLoading} periodStart={prevStart} />
-            <div className="mt-4">
+            <PeriodCol label={currLabel} stats={currStats} loading={statsLoading} periodStart={currStart} />
+          </div>
+
+          {/* Lists row — tops aligned */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="min-w-0">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -1100,12 +1105,7 @@ function ScheduleStatsContent() {
                 />
               )}
             </div>
-          </div>
-
-          {/* Current period */}
-          <div className="min-w-0">
-            <PeriodCol label={currLabel} stats={currStats} loading={statsLoading} periodStart={currStart} />
-            <div className="mt-4">
+            <div className="min-w-0">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
