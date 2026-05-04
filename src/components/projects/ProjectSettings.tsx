@@ -10,6 +10,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -200,6 +208,9 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
   const [color, setColor] = useState(project.color ?? "#6366f1");
   const [iconUrl, setIconUrl] = useState(project.iconUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Workflow tab state
   const [statuses, setStatuses] = useState<Status[]>(initialStatuses);
@@ -325,6 +336,20 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
       toast.error("Failed to save");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteProject = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success("Project deleted");
+      router.push(`/workspace/${workspaceId}`);
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete project");
+      setDeleting(false);
     }
   };
 
@@ -502,6 +527,7 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
   ];
 
   return (
+    <>
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
@@ -581,6 +607,21 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
               <Button onClick={saveGeneral} disabled={saving || !name.trim()} className="w-full">
                 {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Save changes"}
               </Button>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive">Danger Zone</p>
+                <p className="text-xs text-muted-foreground">Deleting a project is permanent and cannot be undone. All tasks, statuses, and layers will be removed.</p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => { setDeleteConfirmName(""); setDeleteDialogOpen(true); }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete project
+                </Button>
+              </div>
             </>
           )}
 
@@ -841,5 +882,35 @@ export function ProjectSettings({ project, statuses: initialStatuses, layers: in
         </div>
       </SheetContent>
     </Sheet>
+
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete project</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. Type <strong>{project.name}</strong> to confirm.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          value={deleteConfirmName}
+          onChange={(e) => setDeleteConfirmName(e.target.value)}
+          placeholder={project.name}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteConfirmName !== project.name || deleting}
+            onClick={deleteProject}
+          >
+            {deleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting…</> : "Delete project"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
