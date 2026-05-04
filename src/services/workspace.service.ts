@@ -7,7 +7,7 @@ import {
   userGroups,
   userGroupMembers,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -246,5 +246,82 @@ export class WorkspaceService {
     });
 
     return !!member;
+  }
+
+  /**
+   * Returns a list of user IDs that the given leader leads (has role='Leader'
+   * in any group in the workspace), excluding the leader themselves.
+   */
+  static async getMemberableUserIds(workspaceId: string, leaderId: string): Promise<string[]> {
+    // Find groups in this workspace where leaderId has role='Leader'
+    const leaderGroups = await db.query.userGroupMembers.findMany({
+      where: and(
+        eq(userGroupMembers.userId, leaderId),
+        eq(userGroupMembers.role, "Leader")
+      ),
+      with: {
+        group: {
+          columns: { id: true, workspaceId: true },
+        },
+      },
+    });
+
+    const leaderGroupIds = leaderGroups
+      .filter((m) => m.group.workspaceId === workspaceId)
+      .map((m) => m.groupId);
+
+    if (leaderGroupIds.length === 0) return [];
+
+    // Collect all member user IDs from those groups (excluding the leader)
+    const memberSet = new Set<string>();
+    for (const groupId of leaderGroupIds) {
+      const members = await db.query.userGroupMembers.findMany({
+        where: and(
+          eq(userGroupMembers.groupId, groupId),
+          ne(userGroupMembers.userId, leaderId)
+        ),
+        columns: { userId: true },
+      });
+      for (const m of members) memberSet.add(m.userId);
+    }
+
+    return Array.from(memberSet);
+  }
+
+  /**
+   * Returns whether leaderId is a Leader in any group that contains targetUserId
+   * (in the given workspace).
+   */
+  static async isLeaderOf(workspaceId: string, leaderId: string, targetUserId: string): Promise<boolean> {
+    // Find groups in this workspace where leaderId has role='Leader'
+    const leaderGroups = await db.query.userGroupMembers.findMany({
+      where: and(
+        eq(userGroupMembers.userId, leaderId),
+        eq(userGroupMembers.role, "Leader")
+      ),
+      with: {
+        group: { columns: { id: true, workspaceId: true } },
+      },
+    });
+
+    const leaderGroupIds = leaderGroups
+      .filter((m) => m.group.workspaceId === workspaceId)
+      .map((m) => m.groupId);
+
+    if (leaderGroupIds.length === 0) return false;
+
+    // Check if targetUserId is a member of any of those groups
+    for (const groupId of leaderGroupIds) {
+      const membership = await db.query.userGroupMembers.findFirst({
+        where: and(
+          eq(userGroupMembers.groupId, groupId),
+          eq(userGroupMembers.userId, targetUserId)
+        ),
+        columns: { id: true },
+      });
+      if (membership) return true;
+    }
+
+    return false;
   }
 }

@@ -12,6 +12,7 @@ import {
   Settings,
   ClipboardList,
   BarChart2,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +56,11 @@ export function Sidebar({ workspaceId, workspaceName, projects = [] }: SidebarPr
       label: t.nav.workLog,
       href: "/work-logs",
       icon: ClipboardList,
+    },
+    {
+      label: "Schedule Stats",
+      href: "/schedule-stats",
+      icon: CalendarDays,
     },
     {
       label: t.nav.statistics,

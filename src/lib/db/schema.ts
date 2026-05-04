@@ -43,6 +43,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   activityLogs: many(activityLogs),
   workLogs: many(workLogs),
   userGroupMemberships: many(userGroupMembers),
+  reviewCommentsAuthored: many(workLogReviewComments, { relationName: "review_comment_author" }),
+  reviewCommentsReceived: many(workLogReviewComments, { relationName: "reviewee_comments" }),
 }));
 
 // =============================================
@@ -142,6 +144,7 @@ export const userGroupMembers = mysqlTable(
       .$defaultFn(() => crypto.randomUUID()),
     groupId: varchar("group_id", { length: 36 }).notNull(),
     userId: varchar("user_id", { length: 36 }).notNull(),
+    role: mysqlEnum("role", ["Leader", "Member"]).notNull().default("Member"),
     addedAt: timestamp("added_at").defaultNow(),
   },
   (table) => [
@@ -543,6 +546,35 @@ export const workLogsRelations = relations(workLogs, ({ one }) => ({
 }));
 
 // =============================================
+// WORK LOG REVIEW COMMENTS
+// =============================================
+export const workLogReviewComments = mysqlTable(
+  "work_log_review_comments",
+  {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+    authorId: varchar("author_id", { length: 36 }).notNull(),
+    revieweeId: varchar("reviewee_id", { length: 36 }).notNull(),
+    periodType: mysqlEnum("period_type", ["week", "month"]).notNull(),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    taskId: varchar("task_id", { length: 36 }),
+    actionType: varchar("action_type", { length: 50 }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  },
+  (table) => [
+    index("idx_rc_reviewee_period").on(table.revieweeId, table.periodStart, table.periodEnd),
+    index("idx_rc_author").on(table.authorId),
+  ]
+);
+
+export const workLogReviewCommentsRelations = relations(workLogReviewComments, ({ one }) => ({
+  author: one(users, { fields: [workLogReviewComments.authorId], references: [users.id], relationName: "review_comment_author" }),
+  reviewee: one(users, { fields: [workLogReviewComments.revieweeId], references: [users.id], relationName: "reviewee_comments" }),
+}));
+
+// =============================================
 // ACTIVITY LOG
 // =============================================
 export const activityLogs = mysqlTable(
@@ -636,3 +668,5 @@ export type NewUserGroupMember = typeof userGroupMembers.$inferInsert;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type NewProjectMember = typeof projectMembers.$inferInsert;
 export type ProjectRole = "Owner" | "Editor" | "Viewer";
+export type WorkLogReviewComment = typeof workLogReviewComments.$inferSelect;
+export type NewWorkLogReviewComment = typeof workLogReviewComments.$inferInsert;
