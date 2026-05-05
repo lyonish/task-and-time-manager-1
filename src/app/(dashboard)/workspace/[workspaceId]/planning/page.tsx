@@ -45,6 +45,7 @@ import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type ViewType = "week" | "2week" | "month";
+type GroupMode = "member" | "project";
 
 interface WorkspaceMember {
   userId: string;
@@ -222,7 +223,7 @@ function assignTracks(assignments: Assignment[]): Map<string, number> {
 const BASE_ROW_HEIGHT = 56;
 
 function calcRowHeight(maxTrack: number): number {
-  return BASE_ROW_HEIGHT + maxTrack * Math.ceil(BAR_HEIGHT / 2);
+  return BASE_ROW_HEIGHT + maxTrack * Math.ceil(BAR_HEIGHT * 4 / 5);
 }
 
 // ─── Per-column capacity ──────────────────────────────────────────────────────
@@ -266,6 +267,7 @@ export default function PlanningPage() {
   const [groupMemberIds, setGroupMemberIds] = useState<Record<string, string[]>>({});
   const [modal, setModal] = useState<ModalState>({ open: false, editing: null });
   const [loading, setLoading] = useState(true);
+  const [groupMode, setGroupMode] = useState<GroupMode>("member");
 
   const columns = getVisibleColumns(pivot, viewType);
   const colGroups = getColGroups(columns);
@@ -381,6 +383,51 @@ export default function PlanningPage() {
     return { trackMap, rowHeight: calcRowHeight(maxTrack) };
   });
 
+  // ── Project rows (by-project view) ─────────────────────────────────────────
+
+  function getMemberColor(userId: string): string {
+    const idx = members.findIndex((m) => m.userId === userId);
+    return DEFAULT_COLORS[(idx >= 0 ? idx : userId.charCodeAt(0)) % DEFAULT_COLORS.length];
+  }
+
+  interface ProjectRow {
+    project: Project | null;
+    assignments: Assignment[];
+  }
+
+  const projectRows: ProjectRow[] = (() => {
+    const groupFilterIds = selectedGroupId !== "all" ? (groupMemberIds[selectedGroupId] ?? []) : null;
+    const visible = assignments.filter((a) => {
+      if (a.startDate > visibleEndStr || a.endDate < visibleStartStr) return false;
+      if (groupFilterIds && !groupFilterIds.includes(a.userId)) return false;
+      return true;
+    });
+
+    const map = new Map<string | null, Assignment[]>();
+    for (const a of visible) {
+      const key = a.projectId ?? null;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    }
+
+    const rows: ProjectRow[] = [];
+    for (const [pid, assigns] of map) {
+      if (pid !== null) {
+        const project = projects.find((p) => p.id === pid) ?? null;
+        rows.push({ project, assignments: assigns });
+      }
+    }
+    rows.sort((a, b) => (a.project?.name ?? "").localeCompare(b.project?.name ?? ""));
+    if (map.has(null)) rows.push({ project: null, assignments: map.get(null)! });
+    return rows;
+  })();
+
+  const projectMeta = projectRows.map((row) => {
+    const trackMap = assignTracks(row.assignments);
+    const maxTrack = trackMap.size > 0 ? Math.max(...Array.from(trackMap.values())) : 0;
+    return { trackMap, rowHeight: calcRowHeight(maxTrack) };
+  });
+
   // ── Bar position ────────────────────────────────────────────────────────────
 
   function barStyle(assignment: Assignment): { left: string; width: string } | null {
@@ -474,6 +521,23 @@ export default function PlanningPage() {
         </Select>
 
         <div className="flex border border-border rounded-md overflow-hidden">
+          {(["member", "project"] as GroupMode[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setGroupMode(v)}
+              className={cn(
+                "px-3 py-1 text-sm font-medium transition-colors",
+                groupMode === v
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {v === "member" ? "By Member" : "By Project"}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex border border-border rounded-md overflow-hidden">
           {(["week", "2week", "month"] as ViewType[]).map((v) => (
             <button
               key={v}
@@ -517,28 +581,44 @@ export default function PlanningPage() {
         ) : (
           <div className="h-full overflow-auto">
             <div className="flex">
-              {/* Left fixed column — member names */}
+              {/* Left fixed column */}
               <div className="w-44 shrink-0 sticky left-0 z-20 bg-background border-r border-border">
                 <div className="border-b border-border" style={{ height: 60 }} />
-                {memberRows.map((row, ri) => (
-                  <div
-                    key={row.user.id}
-                    className="flex items-center gap-2 px-3 border-b border-border"
-                    style={{ height: memberMeta[ri].rowHeight }}
-                  >
-                    <Avatar className="h-7 w-7 shrink-0">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(row.user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-medium truncate leading-tight">
-                        {row.user.name}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{row.role}</span>
-                    </div>
-                  </div>
-                ))}
+                {groupMode === "member"
+                  ? memberRows.map((row, ri) => (
+                      <div
+                        key={row.user.id}
+                        className="flex items-center gap-2 px-3 border-b border-border"
+                        style={{ height: memberMeta[ri].rowHeight }}
+                      >
+                        <Avatar className="h-7 w-7 shrink-0">
+                          <AvatarFallback className="text-xs">
+                            {getInitials(row.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-medium truncate leading-tight">
+                            {row.user.name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{row.role}</span>
+                        </div>
+                      </div>
+                    ))
+                  : projectRows.map((row, ri) => (
+                      <div
+                        key={row.project?.id ?? "no-project"}
+                        className="flex items-center gap-2 px-3 border-b border-border"
+                        style={{ height: projectMeta[ri].rowHeight }}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: row.project?.color ?? "#9ca3af" }}
+                        />
+                        <span className="text-xs font-medium truncate leading-tight">
+                          {row.project?.name ?? "No Project"}
+                        </span>
+                      </div>
+                    ))}
               </div>
 
               {/* Timeline area */}
@@ -574,81 +654,126 @@ export default function PlanningPage() {
                     ))}
                   </div>
 
-                  {/* Member rows */}
-                  {memberRows.map((row, ri) => {
-                    const { trackMap, rowHeight } = memberMeta[ri];
-                    return (
-                      <div
-                        key={row.user.id}
-                        className="flex border-b border-border relative"
-                        style={{ height: rowHeight }}
-                      >
-                        {/* Column cell backgrounds */}
-                        {columns.map((col, ci) => {
-                          const assigned = colAssignedHours(col, row.assignments);
-                          const available = colAvailableHours(col, row.capacity);
-                          const over = available > 0 && assigned > available;
-                          return (
-                            <div
-                              key={ci}
-                              style={{ width: cw }}
-                              className={cn(
-                                "shrink-0 h-full border-r border-border/50 cursor-pointer transition-colors",
-                                over
-                                  ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/30 dark:hover:bg-red-950/50"
-                                  : "hover:bg-muted/20"
-                              )}
-                              onClick={() => openCreate(row.user.id, formatDateYMD(col.start))}
-                            />
-                          );
-                        })}
-
-                        {/* Assignment bars */}
-                        <div className="absolute inset-0 pointer-events-none">
-                          <div className="relative h-full">
-                            {row.assignments.map((assignment) => {
-                              const bs = barStyle(assignment);
-                              if (!bs) return null;
-                              const track = trackMap.get(assignment.id) ?? 0;
-                              const topPx = 8 + track * Math.ceil(BAR_HEIGHT / 2);
-                              const widthPx =
-                                (parseFloat(bs.width) / 100) * totalTimelineWidth;
-                              const color =
-                                assignment.project?.color ??
-                                DEFAULT_COLORS[
-                                  assignment.userId.charCodeAt(0) % DEFAULT_COLORS.length
-                                ];
+                  {/* Rows */}
+                  {groupMode === "member"
+                    ? memberRows.map((row, ri) => {
+                        const { trackMap, rowHeight } = memberMeta[ri];
+                        return (
+                          <div
+                            key={row.user.id}
+                            className="flex border-b border-border relative"
+                            style={{ height: rowHeight }}
+                          >
+                            {columns.map((col, ci) => {
+                              const assigned = colAssignedHours(col, row.assignments);
+                              const available = colAvailableHours(col, row.capacity);
+                              const over = available > 0 && assigned > available;
                               return (
                                 <div
-                                  key={assignment.id}
-                                  className="absolute rounded pointer-events-auto cursor-pointer hover:brightness-90 transition-all flex items-center px-1.5 overflow-hidden"
-                                  style={{
-                                    left: bs.left,
-                                    width: bs.width,
-                                    top: topPx,
-                                    height: BAR_HEIGHT,
-                                    backgroundColor: color,
-                                    opacity: 0.9,
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEdit(assignment);
-                                  }}
-                                  title={`${assignment.title} (${assignment.estimatedHours}h)`}
-                                >
-                                  {widthPx > 60 && (
-                                    <span className="text-[11px] text-white font-medium truncate leading-none">
-                                      {assignment.title}
-                                    </span>
+                                  key={ci}
+                                  style={{ width: cw }}
+                                  className={cn(
+                                    "shrink-0 h-full border-r border-border/50 cursor-pointer transition-colors",
+                                    over
+                                      ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/30 dark:hover:bg-red-950/50"
+                                      : "hover:bg-muted/20"
                                   )}
-                                </div>
+                                  onClick={() => openCreate(row.user.id, formatDateYMD(col.start))}
+                                />
                               );
                             })}
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="relative h-full">
+                                {row.assignments.map((assignment) => {
+                                  const bs = barStyle(assignment);
+                                  if (!bs) return null;
+                                  const track = trackMap.get(assignment.id) ?? 0;
+                                  const topPx = 8 + track * Math.ceil(BAR_HEIGHT * 4 / 5);
+                                  const widthPx = (parseFloat(bs.width) / 100) * totalTimelineWidth;
+                                  const color =
+                                    assignment.project?.color ??
+                                    DEFAULT_COLORS[assignment.userId.charCodeAt(0) % DEFAULT_COLORS.length];
+                                  return (
+                                    <div
+                                      key={assignment.id}
+                                      className="absolute rounded pointer-events-auto cursor-pointer hover:brightness-90 transition-all flex items-center px-1.5 overflow-hidden"
+                                      style={{
+                                        left: bs.left,
+                                        width: bs.width,
+                                        top: topPx,
+                                        height: BAR_HEIGHT,
+                                        backgroundColor: color,
+                                        opacity: 0.9,
+                                      }}
+                                      onClick={(e) => { e.stopPropagation(); openEdit(assignment); }}
+                                      title={`${assignment.title} (${assignment.estimatedHours}h)`}
+                                    >
+                                      {widthPx > 60 && (
+                                        <span className="text-[11px] text-white font-medium truncate leading-none">
+                                          {assignment.title}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })
+                    : projectRows.map((row, ri) => {
+                        const { trackMap, rowHeight } = projectMeta[ri];
+                        return (
+                          <div
+                            key={row.project?.id ?? "no-project"}
+                            className="flex border-b border-border relative"
+                            style={{ height: rowHeight }}
+                          >
+                            {columns.map((col, ci) => (
+                              <div
+                                key={ci}
+                                style={{ width: cw }}
+                                className="shrink-0 h-full border-r border-border/50 hover:bg-muted/20 transition-colors"
+                              />
+                            ))}
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="relative h-full">
+                                {row.assignments.map((assignment) => {
+                                  const bs = barStyle(assignment);
+                                  if (!bs) return null;
+                                  const track = trackMap.get(assignment.id) ?? 0;
+                                  const topPx = 8 + track * Math.ceil(BAR_HEIGHT * 4 / 5);
+                                  const widthPx = (parseFloat(bs.width) / 100) * totalTimelineWidth;
+                                  const color = getMemberColor(assignment.userId);
+                                  const memberName = assignment.assignee?.name ?? "";
+                                  return (
+                                    <div
+                                      key={assignment.id}
+                                      className="absolute rounded pointer-events-auto cursor-pointer hover:brightness-90 transition-all flex items-center px-1.5 overflow-hidden"
+                                      style={{
+                                        left: bs.left,
+                                        width: bs.width,
+                                        top: topPx,
+                                        height: BAR_HEIGHT,
+                                        backgroundColor: color,
+                                        opacity: 0.9,
+                                      }}
+                                      onClick={(e) => { e.stopPropagation(); openEdit(assignment); }}
+                                      title={`${memberName} · ${assignment.title} (${assignment.estimatedHours}h)`}
+                                    >
+                                      {widthPx > 60 && (
+                                        <span className="text-[11px] text-white font-medium truncate leading-none">
+                                          {memberName}{widthPx > 120 ? ` · ${assignment.title}` : ""}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                 </div>
               </div>
 
