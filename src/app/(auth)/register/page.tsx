@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -50,8 +51,13 @@ export default function RegisterPage() {
         return;
       }
 
-      // Redirect to login after successful registration
-      router.push("/login?registered=true");
+      // Auto sign-in and proceed to workspace setup
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (result?.error) {
+        router.push("/login");
+        return;
+      }
+      router.push("/setup");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

@@ -64,6 +64,10 @@ export default async function DashboardPage() {
 
   const data = await getDashboardData(session.user.id);
 
+  if (!data) {
+    redirect("/setup");
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>

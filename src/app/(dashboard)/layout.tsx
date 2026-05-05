@@ -17,7 +17,7 @@ async function getWorkspaceData(userId: string) {
   });
 
   if (!membershipData?.workspace) {
-    return null;
+    redirect("/setup");
   }
 
   const workspace = membershipData.workspace;
