@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { CommentList } from "@/components/comments/CommentList";
 import { StepList } from "@/components/steps/StepList";
+import { TaskHistory } from "@/components/tasks/TaskHistory";
 
 interface Status {
   id: string;
@@ -944,6 +945,9 @@ export function TaskDetailPanel({
               />
             )}
           </div>
+
+          {/* History */}
+          <TaskHistory taskId={task.id} members={members} />
         </div>
       </SheetContent>
     </Sheet>

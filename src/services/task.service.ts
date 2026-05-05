@@ -113,8 +113,9 @@ export class TaskService {
       updates.title = data.title;
       changes.title = { old: task.title, new: data.title };
     }
-    if (data.description !== undefined) {
+    if (data.description !== undefined && data.description !== task.description) {
       updates.description = data.description;
+      changes.description = { old: task.description, new: data.description };
     }
     if (data.priority !== undefined && data.priority !== task.priority) {
       updates.priority = data.priority;
