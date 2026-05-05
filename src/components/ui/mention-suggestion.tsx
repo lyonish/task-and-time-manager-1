@@ -16,7 +16,7 @@ export interface MentionMember {
 
 interface MentionListProps {
   items: MentionMember[];
-  command: (item: MentionMember) => void;
+  command: (item: { id: string; label: string }) => void;
 }
 
 interface MentionListRef {
@@ -40,7 +40,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
           return true;
         }
         if (event.key === "Enter") {
-          if (items[selected]) command(items[selected]);
+          if (items[selected]) command({ id: items[selected].id, label: items[selected].name });
           return true;
         }
         return false;
@@ -54,7 +54,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
         {items.map((item, i) => (
           <button
             key={item.id}
-            onClick={() => command(item)}
+            onClick={() => command({ id: item.id, label: item.name })}
             className={cn(
               "w-full flex flex-col px-3 py-1.5 text-left text-sm hover:bg-accent",
               i === selected && "bg-accent"

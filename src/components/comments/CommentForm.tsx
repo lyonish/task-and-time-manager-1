@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Send } from "lucide-react";
@@ -10,10 +9,10 @@ import { toast } from "sonner";
 interface CommentFormProps {
   taskId: string;
   members: { id: string; name: string; email: string; avatarUrl: string | null }[];
+  onSuccess?: () => void;
 }
 
-export function CommentForm({ taskId, members }: CommentFormProps) {
-  const router = useRouter();
+export function CommentForm({ taskId, members, onSuccess }: CommentFormProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,7 +30,7 @@ export function CommentForm({ taskId, members }: CommentFormProps) {
       if (!response.ok) throw new Error("Failed to post comment");
 
       setContent("");
-      router.refresh();
+      onSuccess?.();
       toast.success("Comment posted");
     } catch {
       toast.error("Failed to post comment");

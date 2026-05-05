@@ -942,6 +942,7 @@ export function TaskDetailPanel({
                 comments={comments}
                 members={members}
                 currentUserId={currentUserId}
+                onCommentPosted={() => loadComments(task.id)}
               />
             )}
           </div>

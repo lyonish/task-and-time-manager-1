@@ -26,6 +26,7 @@ interface CommentListProps {
   comments: Comment[];
   members: Member[];
   currentUserId: string;
+  onCommentPosted?: () => void;
 }
 
 export function CommentList({
@@ -33,12 +34,13 @@ export function CommentList({
   comments,
   members,
   currentUserId,
+  onCommentPosted,
 }: CommentListProps) {
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">Comments ({comments.length})</h3>
 
-      <CommentForm taskId={taskId} members={members} />
+      <CommentForm taskId={taskId} members={members} onSuccess={onCommentPosted} />
 
       <div className="space-y-3">
         {comments.map((comment) => (
