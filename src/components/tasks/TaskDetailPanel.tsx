@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -833,12 +833,12 @@ export function TaskDetailPanel({
           {/* Description */}
           <div className="space-y-2">
             <Label className="text-muted-foreground">Description</Label>
-            <Textarea
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               onBlur={handleSave}
-              placeholder="Add a description..."
-              rows={4}
+              placeholder="Add a description…"
+              minHeight="8rem"
             />
           </div>
 

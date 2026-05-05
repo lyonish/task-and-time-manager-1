@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface Comment {
   id: string;
@@ -139,9 +140,7 @@ export function CommentItem({ comment, isAuthor }: CommentItemProps) {
           )}
         </div>
 
-        <p className="text-sm mt-1 whitespace-pre-wrap">
-          {renderContent(comment.content)}
-        </p>
+        <RichTextDisplay content={comment.content} className="mt-1" />
       </div>
     </div>
   );
