@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { TaskRow } from "./TaskRow";
 import { QuickAddTask } from "./QuickAddTask";
 import { TaskDetailPanel } from "./TaskDetailPanel";
@@ -148,6 +149,10 @@ export function TaskList({
   initialFilters = DEFAULT_FILTERS,
   onConfigChange,
 }: TaskListProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -156,14 +161,18 @@ export function TaskList({
   const [isCompact, setIsCompact] = useState(initialIsCompact);
   const [filters, setFilters] = useState<Filters>(initialFilters ?? DEFAULT_FILTERS);
 
-  // Open task detail panel if ?taskId= is in the URL (e.g. navigated from search)
+  // Sync panel open/close with ?taskId= URL param
   useEffect(() => {
-    const taskId = new URLSearchParams(window.location.search).get("taskId");
-    if (!taskId) return;
+    const taskId = searchParams.get("taskId");
+    if (!taskId) {
+      setDetailOpen(false);
+      setSelectedTask(null);
+      return;
+    }
     const task = tasks.find((t) => t.id === taskId);
     if (task) { setSelectedTask(task); setDetailOpen(true); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount; tasks are stable server props
+  }, [searchParams]);
 
   const notifyChange = (next: { groupBy: GroupBy; viewMode: ViewMode; isCompact: boolean; filters: Filters }) => {
     onConfigChange?.(next);
@@ -193,9 +202,19 @@ export function TaskList({
   })();
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    setDetailOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("taskId", task.id);
+    router.push(`${pathname}?${params.toString()}`);
   };
+
+  const handlePanelOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("taskId");
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname);
+    }
+  }, [router, pathname, searchParams]);
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups((prev) => {
@@ -470,7 +489,7 @@ export function TaskList({
       <TaskDetailPanel
         task={selectedTask}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={handlePanelOpenChange}
         statuses={statuses}
         layers={layers}
         tasks={tasks}
