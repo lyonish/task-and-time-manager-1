@@ -3,8 +3,14 @@
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import MentionExtension from "@tiptap/extension-mention";
 import { Markdown } from "tiptap-markdown";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
+import {
+  Bold, Italic, Strikethrough, Code, List, ListOrdered, Heading2, Minus,
+} from "lucide-react";
+import { type MentionMember, createMentionSuggestion } from "./mention-suggestion";
 
 const SoftEnter = Extension.create({
   name: "softEnter",
@@ -14,10 +20,20 @@ const SoftEnter = Extension.create({
     };
   },
 });
-import { cn } from "@/lib/utils";
-import {
-  Bold, Italic, Strikethrough, Code, List, ListOrdered, Heading2, Minus,
-} from "lucide-react";
+
+// Extend Mention to add a markdown serializer so tiptap-markdown
+// outputs @[Name](id) format instead of swallowing the node.
+const MentionWithMarkdown = MentionExtension.extend({
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: { write: (s: string) => void }, node: { attrs: { id: string; label: string } }) {
+          state.write(`@[${node.attrs.label}](${node.attrs.id})`);
+        },
+      },
+    };
+  },
+});
 
 interface RichTextEditorProps {
   value: string;
@@ -27,6 +43,7 @@ interface RichTextEditorProps {
   className?: string;
   minHeight?: string;
   toolbar?: boolean;
+  members?: MentionMember[];
 }
 
 export function RichTextEditor({
@@ -37,7 +54,10 @@ export function RichTextEditor({
   className,
   minHeight = "6rem",
   toolbar = true,
+  members = [],
 }: RichTextEditorProps) {
+  const suggestion = useMemo(() => createMentionSuggestion(members), [members]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -45,6 +65,10 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder }),
       Markdown.configure({ transformPastedText: true }),
       SoftEnter,
+      MentionWithMarkdown.configure({
+        HTMLAttributes: { class: "mention" },
+        suggestion,
+      }),
     ],
     content: value,
     editorProps: {
@@ -150,7 +174,7 @@ export function RichTextEditor({
       <EditorContent
         editor={editor}
         style={{ minHeight }}
-        className="px-3 py-2 [&_.ProseMirror]:min-h-[inherit] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+        className="px-3 py-2 [&_.ProseMirror]:min-h-[inherit] [&_.ProseMirror_.mention]:text-primary [&_.ProseMirror_.mention]:font-medium [&_.ProseMirror_.mention]:bg-primary/10 [&_.ProseMirror_.mention]:px-1 [&_.ProseMirror_.mention]:rounded [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
       />
     </div>
   );

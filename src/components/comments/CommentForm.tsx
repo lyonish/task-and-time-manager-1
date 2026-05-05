@@ -12,7 +12,7 @@ interface CommentFormProps {
   members: { id: string; name: string; email: string; avatarUrl: string | null }[];
 }
 
-export function CommentForm({ taskId }: CommentFormProps) {
+export function CommentForm({ taskId, members }: CommentFormProps) {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,9 +45,10 @@ export function CommentForm({ taskId }: CommentFormProps) {
       <RichTextEditor
         value={content}
         onChange={setContent}
-        placeholder="Write a comment… (Markdown supported)"
+        placeholder="Write a comment… (@ to mention)"
         minHeight="4rem"
         toolbar={false}
+        members={members}
       />
       <div className="flex justify-end">
         <Button

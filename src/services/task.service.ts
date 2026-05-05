@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { tasks, activityLogs, projects, workflowStatuses } from "@/lib/db/schema";
 import { eq, asc, and, desc } from "drizzle-orm";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validations/task";
+import { NotificationService } from "./notification.service";
 
 export class TaskService {
   static async create(projectId: string, data: CreateTaskInput, userId: string) {
@@ -130,6 +131,16 @@ export class TaskService {
     if (data.assigneeId !== undefined && data.assigneeId !== task.assigneeId) {
       updates.assigneeId = data.assigneeId;
       changes.assigneeId = { old: task.assigneeId, new: data.assigneeId };
+      if (data.assigneeId) {
+        await NotificationService.create({
+          userId: data.assigneeId,
+          actorId: userId,
+          type: "task_assigned",
+          title: `You were assigned to "${task.title}"`,
+          taskId: id,
+          projectId: task.projectId,
+        });
+      }
     }
     if (data.layerId !== undefined && data.layerId !== task.layerId) {
       updates.layerId = data.layerId;
@@ -213,7 +224,6 @@ export class TaskService {
       .set({ assigneeId, updatedAt: new Date() })
       .where(eq(tasks.id, id));
 
-    // Log activity
     await db.insert(activityLogs).values({
       workspaceId: task.project!.workspaceId,
       projectId: task.projectId,
@@ -222,6 +232,17 @@ export class TaskService {
       action: "task_assigned",
       metadata: { assigneeId },
     });
+
+    if (assigneeId) {
+      await NotificationService.create({
+        userId: assigneeId,
+        actorId: userId,
+        type: "task_assigned",
+        title: `You were assigned to "${task.title}"`,
+        taskId: id,
+        projectId: task.projectId,
+      });
+    }
 
     return this.getById(id);
   }

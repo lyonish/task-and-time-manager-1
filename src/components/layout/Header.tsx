@@ -2,9 +2,10 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { SearchDialog } from "./SearchDialog";
+import { NotificationBell } from "./NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -40,10 +41,7 @@ export function Header() {
         <ThemeSwitcher />
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative text-sidebar-foreground/70">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </Button>
+        <NotificationBell />
 
         {/* User Menu */}
         <DropdownMenu>

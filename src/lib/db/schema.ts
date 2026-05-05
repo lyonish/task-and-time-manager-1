@@ -510,6 +510,36 @@ export const mentionsRelations = relations(mentions, ({ one }) => ({
 }));
 
 // =============================================
+// NOTIFICATIONS
+// =============================================
+export const notifications = mysqlTable(
+  "notifications",
+  {
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    actorId: varchar("actor_id", { length: 36 }),
+    type: mysqlEnum("type", ["comment_added", "task_assigned", "mention"]).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    body: varchar("body", { length: 500 }),
+    taskId: varchar("task_id", { length: 36 }),
+    projectId: varchar("project_id", { length: 36 }),
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_notifications_user").on(table.userId, table.createdAt),
+    index("idx_notifications_unread").on(table.userId, table.isRead),
+  ]
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+  actor: one(users, { fields: [notifications.actorId], references: [users.id], relationName: "actor" }),
+}));
+
+// =============================================
 // WORK LOGS
 // =============================================
 export const workLogs = mysqlTable(
@@ -757,3 +787,5 @@ export type WorkLogReviewComment = typeof workLogReviewComments.$inferSelect;
 export type NewWorkLogReviewComment = typeof workLogReviewComments.$inferInsert;
 export type UserCapacity = typeof userCapacity.$inferSelect;
 export type PlannedAssignment = typeof plannedAssignments.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;

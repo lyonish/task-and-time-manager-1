@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { comments, mentions, activityLogs, tasks } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { CreateCommentInput, UpdateCommentInput } from "@/lib/validations/comment";
+import { NotificationService } from "./notification.service";
 
 // Parse @mentions from content - matches @[Name](userId)
 const MENTION_REGEX = /@\[([^\]]+)\]\(([^)]+)\)/g;
@@ -23,7 +24,7 @@ export class CommentService {
   ) {
     const task = await db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
-      with: { project: true },
+      with: { project: true, assignee: true },
     });
 
     if (!task) throw new Error("Task not found");
@@ -40,12 +41,8 @@ export class CommentService {
     // Parse and create mentions
     const mentionIds = this.parseMentions(data.content);
     for (const mentionedUserId of mentionIds) {
-      await db.insert(mentions).values({
-        commentId,
-        mentionedUserId,
-      });
+      await db.insert(mentions).values({ commentId, mentionedUserId });
 
-      // Log mention activity
       await db.insert(activityLogs).values({
         workspaceId: task.project!.workspaceId,
         projectId: task.projectId,
@@ -53,6 +50,29 @@ export class CommentService {
         userId,
         action: "mention_created",
         metadata: { mentionedUserId, commentId },
+      });
+
+      await NotificationService.create({
+        userId: mentionedUserId,
+        actorId: userId,
+        type: "mention",
+        title: `You were mentioned in "${task.title}"`,
+        body: data.content.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1").slice(0, 200),
+        taskId,
+        projectId: task.projectId,
+      });
+    }
+
+    // Notify task assignee about new comment (unless they wrote it or were already mentioned)
+    if (task.assigneeId && task.assigneeId !== userId && !mentionIds.includes(task.assigneeId)) {
+      await NotificationService.create({
+        userId: task.assigneeId,
+        actorId: userId,
+        type: "comment_added",
+        title: `New comment on "${task.title}"`,
+        body: data.content.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1").slice(0, 200),
+        taskId,
+        projectId: task.projectId,
       });
     }
 
